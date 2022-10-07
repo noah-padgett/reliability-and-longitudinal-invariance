@@ -8,6 +8,7 @@ website:
       - href: index.qmd
         text: Home
       - about.qmd
+      - license.qmd
   sidebar:
     style: "docked"
     search: true
