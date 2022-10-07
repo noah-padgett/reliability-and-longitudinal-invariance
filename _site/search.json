@@ -4,7 +4,7 @@
     "href": "test-retest-reliability.html",
     "title": "Test-Retest Reliability",
     "section": "",
-    "text": "On this page, rtest-retest reliability is discussed in more detail."
+    "text": "On this page, test-retest reliability is discussed in more detail."
   },
   {
     "objectID": "reliability.html",
@@ -26,5 +26,12 @@
     "title": "About",
     "section": "",
     "text": "1 + 1\n\n[1] 2"
+  },
+  {
+    "objectID": "longitudinal-invariance.html",
+    "href": "longitudinal-invariance.html",
+    "title": "Longitudinal Invariance",
+    "section": "",
+    "text": "On this page, longitudinal invariance is discussed in more detail."
   }
 ]
