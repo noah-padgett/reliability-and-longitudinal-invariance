@@ -1,0 +1,5 @@
+---
+title: "Longitudinal Invariance"
+---
+
+On this page, longitudinal invariance is discussed in more detail.
