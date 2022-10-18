@@ -125,7 +125,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <link rel="stylesheet" href="styles.css">
 </head>
 
-<body class="nav-fixed fullcontent">
+<body class="nav-sidebar docked nav-fixed fullcontent">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -148,24 +148,59 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li class="nav-item">
     <a class="nav-link" href="./license.html">License</a>
   </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./reliability.html">Reliability</a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./test-retest-reliability.html">Test-Retest Reliability</a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link active" href="./longitudinal-invariance.html" aria-current="page">Longitudinal Invariance</a>
-  </li>  
 </ul>
               <div id="quarto-search" class="" title="Search"></div>
           </div> <!-- /navcollapse -->
       </div> <!-- /container-fluid -->
     </nav>
+  <nav class="quarto-secondary-nav" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+    <div class="container-fluid d-flex justify-content-between">
+      <h1 class="quarto-secondary-nav-title">Longitudinal Invariance</h1>
+      <button type="button" class="quarto-btn-toggle btn" aria-label="Show secondary navigation">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </nav>
 </header>
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse sidebar-navigation docked overflow-auto">
+      <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+      </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">Results</a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reliability.html" class="sidebar-item-text sidebar-link">Reliability</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./test-retest-reliability.html" class="sidebar-item-text sidebar-link">Test-Retest Reliability</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./longitudinal-invariance.html" class="sidebar-item-text sidebar-link active">Longitudinal Invariance</a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
 <!-- margin-sidebar -->
     
 <!-- main -->
@@ -173,7 +208,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Longitudinal Invariance</h1>
+<h1 class="title d-none d-lg-block">Longitudinal Invariance</h1>
 </div>
 
 
@@ -194,20 +229,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#|cache.comments=T</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span>opts_chunk<span class="sc">$</span><span class="fu">set</span>(</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">autodep =</span> <span class="cn">TRUE</span>, <span class="at">cache=</span><span class="cn">TRUE</span>, <span class="at">out.width =</span> <span class="dv">100</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">fig.width =</span> <span class="dv">6</span>, <span class="at">fig.asp =</span> <span class="fl">0.625</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">autodep =</span> <span class="cn">TRUE</span>, <span class="at">cache=</span><span class="cn">TRUE</span>, <span class="at">out.width =</span> <span class="st">"100%"</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">fig.width =</span> <span class="dv">24</span>, <span class="at">fig.asp =</span> <span class="fl">0.625</span>,</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">tidy =</span> <span class="st">'formatR'</span></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/set-up_d1434e0ce545a9e9bda6c492221d3a49">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/set-up_467bea5ce35833fca25fc26d604f9aa3">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># load packages</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"code/load_packages.R"</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"code/load_utility_functions.R"</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">12345</span>) <span class="co"># for replicability</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">12345</span>)  <span class="co"># for replicability</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="data" class="level1">
 <h1>Data</h1>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/read-in_eb472affbac2d567870b8b6c0de6cf93">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/read-in_0a162f74c5aed30475e0874e2a19934b">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>datw1 <span class="ot">&lt;-</span> readr<span class="sc">::</span><span class="fu">read_csv</span>(<span class="st">"data/UBC_Data_Wave1_Clean.csv"</span>);</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Rows: 4058 Columns: 86
@@ -278,7 +313,7 @@ dbl (85): duration, Gender, Age, Year_School, CG1, CG2, CG3, CI1, CI2, CI3, ...
 </div>
 <section id="data-summary" class="level2">
 <h2 class="anchored" data-anchor-id="data-summary">Data Summary</h2>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/unnamed-chunk-1_4966fd9d76c20a564e030b70807bc108">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/unnamed-chunk-1_826e4d130a6a51ec5ac0393539fc622e">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># data summary stats</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
@@ -286,7 +321,7 @@ dbl (85): duration, Gender, Age, Year_School, CG1, CG2, CG3, CI1, CI2, CI3, ...
 <section id="measurement-model" class="level1">
 <h1>Measurement Model</h1>
 <p>The basic measurement model is shown below (in lavaan syntax) and in the path diagram.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/model_caac0b363e9d304bd76fdcc012dd820e">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/model_8ab9e159e572b577f56f93e1f5fa0292">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>base_model <span class="ot">&lt;-</span> <span class="st">"</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="st">C =~ NA*CG1 + CG2 + CG3 + CI1 + CI2 + CI3</span></span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="st">S =~ NA*SS1 + SS2 + SS3 + SO1 + SO2 + SO3</span></span>
@@ -351,7 +386,7 @@ dbl (85): duration, Gender, Age, Year_School, CG1, CG2, CG3, CI1, CI2, CI3, ...
 </div>
 <section id="configural-invariance" class="level2">
 <h2 class="anchored" data-anchor-id="configural-invariance">Configural Invariance</h2>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-config_764cfaa7a763672661a9b8dd1f4bc034">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-config_56c2918179da025e69a6d3663d2398e6">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>nPerm <span class="ot">&lt;-</span> <span class="dv">1000</span>  <span class="co"># for testing - for full analysis use 1000/10000</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co"># robust not available for categorical model</span></span>
@@ -1178,12 +1213,12 @@ srmr                  0.067   0.063</code></pre>
 <pre><code>`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
 </div>
 <div class="cell-output-display">
-<p><img src="longitudinal-invariance_files/figure-html/invar-test-config-1.png" class="img-fluid" width="100"></p>
+<p><img src="longitudinal-invariance_files/figure-html/invar-test-config-1.png" class="img-fluid" style="width:100.0%"></p>
 </div>
 </div>
 <p>The results are promising, and give some evidence that the factor structure is likely invariant across waves. The distributions for the scaled-CFI and RMSEA are troublesome, pointing to potential variance in the structure due to the high value of the observed fit index relative to the permutation distribution. I would like the distributions too all similar to the CFI distribution where the observed fit value is nearly in the center of permutation distribution.</p>
 <p>Next, the model above is re-estimated using the “wide” format approach that incorporate the lag covariance between same-item residuals.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/inv-config-wide-fit_22c913c7f357bb6f88cac7a581de1dac">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/inv-config-wide-fit_41d0ebb88b0ab26e410b5580ed762c6f">
 <div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>fit.config.wide <span class="ot">&lt;-</span> <span class="fu">cfa</span>(<span class="at">model =</span> configural.model.wide, <span class="at">data =</span> wide.analysis.data,</span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">ordered =</span> T)</span>
 <span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit.config.wide, <span class="at">standardized =</span> T, <span class="at">fit.measures =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1764,7 +1799,7 @@ Scales y*:
 </div>
 <p>The estimated parameters are similar between the two specification. We will focus on this latter model specification, but estimate the former (because it is very easy to get) to see if any major differences appear in our conclusions about invariance.</p>
 <p>Residuals <span class="math display">\[Cor(Obsersed)-Cor(Model\ Implied)\]</span></p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/config-residuals_065122161bb9e492c048e22a2ac02ad2">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/config-residuals_48aafc4300a32f9f2644111ea23912c3">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>resid.config.out <span class="ot">&lt;-</span> lavaan<span class="sc">::</span><span class="fu">resid</span>(fit.config.wide, <span class="at">type =</span> <span class="st">"cor"</span>)</span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>transform_resid_to_dataframe <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
 <span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    xcov <span class="ot">&lt;-</span> x<span class="sc">$</span>cov</span>
@@ -11305,11 +11340,11 @@ Scales y*:
 <span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="sc">-</span><span class="fl">0.15</span>, <span class="at">y =</span> <span class="dv">9</span>, <span class="at">label =</span> <span class="st">"Over estimate"</span>) <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>,</span>
 <span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="fl">0.15</span>, <span class="at">y =</span> <span class="dv">9</span>, <span class="at">label =</span> <span class="st">"Under estimate"</span>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="longitudinal-invariance_files/figure-html/config-residuals-1.png" class="img-fluid" width="100"></p>
+<p><img src="longitudinal-invariance_files/figure-html/config-residuals-1.png" class="img-fluid" style="width:100.0%"></p>
 </div>
 </div>
 <p>Mod indices</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/config-mod indices_f59053ce89462b90622bb8b4c11f7637">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/config-mod indices_740a8b66b3cd666aad204efa25a4ec1f">
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">modindices</span>(fit.config.wide, <span class="at">sort. =</span> T, <span class="at">maximum.number =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       lhs op   rhs      mi    epc sepc.lv sepc.all sepc.nox
@@ -11342,7 +11377,7 @@ Scales y*:
 <p>When testing the equivalence of the threshold, the tricky part is then freeing the estimation of the latent response scales and intercepts in wave 2. In wave 1, the latent response scales and intercepts are fixed to 1 and 0, respectively, for identification. At wave 2, the same item latent response scales and intercepts are estimates <em>relative</em> to their wave 1 counterparts. There is no easy way (that I know of) to write this full model out for a longitudinal model in wide format as the items are entered in within each individual (i.e., no “group” syntax) that makes the syntax more streamlined. Therefore, the model must be written out completely. Well, you can shorten the code, but I have written the full model out so that I can make sure the model is specified correctly and is easy to share how intense this can be.</p>
 <section id="longitudinal-model" class="level3">
 <h3 class="anchored" data-anchor-id="longitudinal-model">Longitudinal Model</h3>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-threshold-longitudinal_e2436655aa9e2173608154adab3ad8a3">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-threshold-longitudinal_c0e6c36d371b1f450dd9814b17a331bd">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>threshold.model.wide <span class="ot">&lt;-</span> <span class="st">"</span></span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="st">## ================================================= ##</span></span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="st">## Wave 1</span></span>
@@ -12162,7 +12197,7 @@ fit.threshold.wide 867         8264.0     52.494      84     0.9972</code></pre>
 </div>
 </div>
 <p>When specifying the longitudinal covariances among items, the chi-square difference test gives evidence that the thresholds can be held invariant with approximately equal thresholds between waves. A way to <strong>roughly</strong> verify if is setting the thresholds equal is substantively reasonably is to look at the difference in thresholds between waves. The following plot visualizes the difference in thresholds across waves from the configural model. In this figure, I plotted each threshold highlighted by the domain that each threshold corresponds to. If all the differences (wave 2 - wave 1) are centered around zero, then we would have a rough approximation of the average equality. However, another use of the figure is to extract the most extreme difference. The most extreme difference can then be investigated further for potential substantive differences in the interpretation of the response probabilities of the difference categories.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/visualize-thresholds-config_741d712db2c0dc082039a369c608995b">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/visualize-thresholds-config_f422e1684782abd1b143e8058237c197">
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>config.model.threshold.est <span class="ot">&lt;-</span> lavaan<span class="sc">::</span><span class="fu">parTable</span>(fit.config.wide) <span class="sc">%&gt;%</span></span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(op <span class="sc">==</span> <span class="st">"|"</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">group =</span> <span class="fu">substr</span>(lhs, <span class="fu">nchar</span>(lhs), <span class="dv">1000</span>), <span class="at">lhs =</span> <span class="fu">substr</span>(lhs, <span class="dv">1</span>, <span class="fu">nchar</span>(lhs) <span class="sc">-</span></span>
@@ -12185,7 +12220,7 @@ fit.threshold.wide 867         8264.0     52.494      84     0.9972</code></pre>
 <span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="fl">1.5</span>, <span class="at">y =</span> <span class="fl">0.372</span>, <span class="at">label =</span> <span class="st">"DG2"</span>) <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Threshold"</span>, <span class="at">y =</span> <span class="st">"Difference in Thresholds (Wave 2 - Wave 1)"</span>) <span class="sc">+</span></span>
 <span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_classic</span>() <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="fu">c</span>(<span class="fl">0.8</span>, <span class="fl">0.8</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="longitudinal-invariance_files/figure-html/visualize-thresholds-config-1.png" class="img-fluid" width="100"></p>
+<p><img src="longitudinal-invariance_files/figure-html/visualize-thresholds-config-1.png" class="img-fluid" style="width:100.0%"></p>
 </div>
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># compute response probabilities for category one of item DG2</span></span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>tau1_1 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fl">2.4</span></span>
@@ -12204,7 +12239,7 @@ fit.threshold.wide 867         8264.0     52.494      84     0.9972</code></pre>
 </div>
 <p>Item DG2 appears to be the most significance variance between waves. When the differences (Wave 2 - Wave 1) is positive, this indicates that the probability of endorsing a <em>lower</em> category increases. For instance, threshold one (<span class="math inline">\(\tau_1\)</span>) of item DG2 increased by 0.37 from wave 1 (<span class="math inline">\(\tau_1=-2.40\)</span>) to wave 2 (<span class="math inline">\(\tau_1=-2.03\)</span>). Moving up on the logit scale implies that the probability of endorsing “Strongly disagree” for an individual of average “Direction” increased from 0.083 to 0.116 between wave 1 and wave 2. Said another way, a higher threshold results in a lower expected response or item mean. In this case, the change is pretty negligible increase in absolute terms. I think a less than 4% increase in relative probability for the average person is an acceptable level of difference to allows in the thresholds across waves, and we can safely say that invariance of thresholds reasonable from a substantive perspective of the average response probability.</p>
 <p>Investigate residuals</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/thresh-residuals_29ba6554aae292d8695fb1c513b9d36b">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/thresh-residuals_410d0e7681b50be2714125b2bceaf793">
 <div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>resid.thresh.out <span class="ot">&lt;-</span> lavaan<span class="sc">::</span><span class="fu">resid</span>(fit.threshold.wide, <span class="at">type =</span> <span class="st">"cor"</span>)</span>
 <span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>resid.thresh <span class="ot">&lt;-</span> <span class="fu">transform_resid_to_dataframe</span>(resid.thresh.out) <span class="sc">%&gt;%</span></span>
@@ -21716,11 +21751,11 @@ fit.threshold.wide 867         8264.0     52.494      84     0.9972</code></pre>
 <span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="sc">-</span><span class="fl">0.15</span>, <span class="at">y =</span> <span class="dv">9</span>, <span class="at">label =</span> <span class="st">"Over estimate"</span>) <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>,</span>
 <span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="fl">0.15</span>, <span class="at">y =</span> <span class="dv">9</span>, <span class="at">label =</span> <span class="st">"Under estimate"</span>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="longitudinal-invariance_files/figure-html/thresh-residuals-1.png" class="img-fluid" width="100"></p>
+<p><img src="longitudinal-invariance_files/figure-html/thresh-residuals-1.png" class="img-fluid" style="width:100.0%"></p>
 </div>
 </div>
 <p>Mod indices</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/thresh-mod indices_08e3934011d8294cdb5a3d7b57a43b68">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/thresh-mod indices_b0489515a63dd3e787c4e47ae74f6f24">
 <div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">modindices</span>(fit.threshold.wide, <span class="at">sort. =</span> T, <span class="at">maximum.number =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       lhs op   rhs      mi    epc sepc.lv sepc.all sepc.nox
@@ -21750,7 +21785,7 @@ fit.threshold.wide 867         8264.0     52.494      84     0.9972</code></pre>
 <section id="multigroup-model" class="level3">
 <h3 class="anchored" data-anchor-id="multigroup-model">Multigroup model</h3>
 <p>Let’s check how the model looks without assuming the longitudinal error covariances. I believe this model will fit worse is more likely to indicate variance in the thresholds, but we have sufficient evidence from the above analysis to conclude the tenability of invariance.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-thresholds_a5c410d10ef7e96322622d098fa6e0ff">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-thresholds_99af3e702dcc07f7036baa9824914b8e">
 <div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="do">## threshol invariance</span></span>
 <span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>syntax.thresh <span class="ot">&lt;-</span> <span class="fu">measEq.syntax</span>(<span class="at">configural.model =</span> mod.config, <span class="at">data =</span> analysis.dat,</span>
 <span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ordered =</span> T, <span class="at">parameterization =</span> <span class="st">"delta"</span>, <span class="at">ID.cat =</span> <span class="st">"Wu.Estabrook.2016"</span>, <span class="at">ID.fac =</span> <span class="st">"std.lv"</span>,</span>
@@ -22370,7 +22405,7 @@ fit.threshold 456         6762.1     70.403      84     0.8553</code></pre>
 <section id="test-loading-metric-invariance" class="level2">
 <h2 class="anchored" data-anchor-id="test-loading-metric-invariance">Test Loading (Metric) Invariance</h2>
 <p>Next, the loadings are tested for equality across waves. This is accomplished by first constraining the loadings to be equal across waves then freeing the factor variances at wave 2.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-loadings-longitudinal_002b52dd16a72d6583ae9a785567187c">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-loadings-longitudinal_435ff32e75585717550be6327b71ef5f">
 <div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>loading.model.wide <span class="ot">&lt;-</span> <span class="st">"</span></span>
 <span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="st">## ================================================= ##</span></span>
 <span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="st">## Wave 1</span></span>
@@ -23191,7 +23226,7 @@ fit.loading.wide   885         8295.4     11.855      18     0.8546</code></pre>
 </div>
 </div>
 <p>The chi-square difference test gives evidence for the tenability of equality of factor loadings across waves. However, we can dive deeper to further probe this inference. Similar to the threshold, we can investigate the degree the variance will substantive change if will allow variance in the loadings. The following plot visualizes the difference in loadings across waves from the threshold model, where the loadings were different across waves.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/visualize-loadings-threshold_674c1479ab8b0b8bc656c475ef825d1f">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/visualize-loadings-threshold_f3faed2d7eb75c3b2c26944c99d1b7a7">
 <div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>thresh.model.loading.est <span class="ot">&lt;-</span> lavaan<span class="sc">::</span><span class="fu">parTable</span>(fit.threshold.wide) <span class="sc">%&gt;%</span></span>
 <span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(op <span class="sc">==</span> <span class="st">"=~"</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">group =</span> <span class="fu">substr</span>(lhs, <span class="fu">nchar</span>(lhs), <span class="dv">1000</span>), <span class="at">lhs =</span> <span class="fu">substr</span>(lhs, <span class="dv">1</span>, <span class="fu">nchar</span>(lhs) <span class="sc">-</span></span>
@@ -23208,7 +23243,7 @@ fit.loading.wide   885         8295.4     11.855      18     0.8546</code></pre>
 <span id="cb51-14"><a href="#cb51-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Domain"</span>, <span class="at">y =</span> <span class="st">"Difference in Loadings (Wave 2 - Wave 1)"</span>,</span>
 <span id="cb51-15"><a href="#cb51-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Difference in standardized loadings"</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="longitudinal-invariance_files/figure-html/visualize-loadings-threshold-1.png" class="img-fluid" width="100"></p>
+<p><img src="longitudinal-invariance_files/figure-html/visualize-loadings-threshold-1.png" class="img-fluid" style="width:100.0%"></p>
 </div>
 <div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>thresh.model.loading.est <span class="sc">%&gt;%</span></span>
 <span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">item =</span> rhs, <span class="st">`</span><span class="at">Wave 1</span><span class="st">`</span> <span class="ot">=</span> <span class="st">`</span><span class="at">1</span><span class="st">`</span>, <span class="st">`</span><span class="at">Wave 2</span><span class="st">`</span> <span class="ot">=</span> <span class="st">`</span><span class="at">2</span><span class="st">`</span>) <span class="sc">%&gt;%</span></span>
@@ -23385,7 +23420,7 @@ fit.loading.wide   885         8295.4     11.855      18     0.8546</code></pre>
 <p>Similar to the thresholds, the difference between wave 1 and wave 2 estimates of the factor loadings is a small postive difference that may be negligible. However, it is interesting that the wave two loadings are nearly all larger, indicating that the strength of the relationship between items and factors may have increased to some degree at wave 2. The max <em>standardized</em> difference is 0.11 (DM1), which could be substantively meaningful depending on where this difference occurs (i.e., what is the starting magnitude). At wave 1, the loading was .76, and, at wave 2, the loading was .87. Both values are quite reasonably high for a standardized loading. This along with the finding that all loadings across both waves were at .65, I don’t think we lose any significance amount of measurement precision by assuming equality of loadings. The lack of potential change in substantive interpretation along with the chi-square difference test gives reasonable evidene to proceed with investigating invariance.</p>
 <p>More generally, items showing the largest difference across waves should be investigated for the content of the items to investigate if the content may point to a reason for potential differences over time.</p>
 <p>Lastly, check the non-longitudinal approach.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-loadings_d7e25bfbd76a065937e5113a68e327e1">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-loadings_86007bc7c48a4bf070b5cc15d8e73e3e">
 <div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="do">## metric invariance</span></span>
 <span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>syntax.metric <span class="ot">&lt;-</span> <span class="fu">measEq.syntax</span>(<span class="at">configural.model =</span> mod.config, <span class="at">data =</span> analysis.dat,</span>
 <span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ordered =</span> T, <span class="at">parameterization =</span> <span class="st">"delta"</span>, <span class="at">ID.cat =</span> <span class="st">"Wu.Estabrook.2016"</span>, <span class="at">ID.fac =</span> <span class="st">"std.lv"</span>,</span>
@@ -23972,7 +24007,7 @@ fit.loading   474         6789.0      12.95      18     0.7945</code></pre>
 </div>
 </div>
 <p>Investigate residuals</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/loading-residuals_7c5d2ed6bfda9b30ba86564efb5da753">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/loading-residuals_9453d4dcd9c3227791e5023c57976d96">
 <div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>resid.loading.out <span class="ot">&lt;-</span> lavaan<span class="sc">::</span><span class="fu">resid</span>(fit.loading.wide, <span class="at">type =</span> <span class="st">"cor"</span>)</span>
 <span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>resid.loading <span class="ot">&lt;-</span> <span class="fu">transform_resid_to_dataframe</span>(resid.loading.out) <span class="sc">%&gt;%</span></span>
@@ -33484,11 +33519,11 @@ fit.loading   474         6789.0      12.95      18     0.7945</code></pre>
 <span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="sc">-</span><span class="fl">0.15</span>, <span class="at">y =</span> <span class="dv">9</span>, <span class="at">label =</span> <span class="st">"Over estimate"</span>) <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>,</span>
 <span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="fl">0.15</span>, <span class="at">y =</span> <span class="dv">9</span>, <span class="at">label =</span> <span class="st">"Under estimate"</span>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="longitudinal-invariance_files/figure-html/loading-residuals-1.png" class="img-fluid" width="100"></p>
+<p><img src="longitudinal-invariance_files/figure-html/loading-residuals-1.png" class="img-fluid" style="width:100.0%"></p>
 </div>
 </div>
 <p>Mod indices</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/loading-mod indices_6eef63be51d8668a408eec68e9c0ca1b">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/loading-mod indices_117c90619493989652b7a93c83047fcc">
 <div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="fu">modindices</span>(fit.loading.wide, <span class="at">sort. =</span> T, <span class="at">maximum.number =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       lhs op   rhs      mi    epc sepc.lv sepc.all sepc.nox
@@ -33518,7 +33553,7 @@ fit.loading   474         6789.0      12.95      18     0.7945</code></pre>
 <section id="test-latent-response-intercept-scalar-invariance" class="level2">
 <h2 class="anchored" data-anchor-id="test-latent-response-intercept-scalar-invariance">Test Latent Response Intercept (scalar) Invariance</h2>
 <p>Testing equality of the latent response intercepts given that the thresholds and loadings are held constant. testing the latent response variables have equal intercepts across waves, the latent factor intercepts can now be freely estimated in wave 2. This is again part of the complexity of this approach is that by restricting part of the model results in another part of the model being identifiable and comparable across waves.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-lrintercept-longitudinal_d6b7a48831be8584f0f87a13344f4609">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-lrintercept-longitudinal_3565928def9fc9d53e6f04bb525f8145">
 <div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a>lrintercept.model.wide <span class="ot">&lt;-</span> <span class="st">"</span></span>
 <span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a><span class="st">## ================================================= ##</span></span>
 <span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a><span class="st">## Wave 1</span></span>
@@ -34341,7 +34376,7 @@ fit.lrintercept.wide 903         8317.8     15.011      18     0.6612</code></pr
 </div>
 <p>The chi-square difference test gives evidence of invariance in latent response intercepts across waves. Differences in the latent response intercept would represent a shift in the probability of endorsing all categories between the waves across all levels of the latent variable, not just the average. Meaning, that a negative shift in the latent response intercept between waves would indicate a tendency to endorse lower response categories.</p>
 <p>An example of this is shown next after extracting and finding the item with the last latent response mean difference.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/visualize-lrintercept-differences_2000b63dbc57c52177e19858e36fce0b">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/visualize-lrintercept-differences_70b0b34b4d0e996a4869d0637ad646b3">
 <div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>loading.model.lrintercept.est <span class="ot">&lt;-</span> lavaan<span class="sc">::</span><span class="fu">parTable</span>(fit.loading.wide) <span class="sc">%&gt;%</span></span>
 <span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(op <span class="sc">==</span> <span class="st">"~1"</span>, est <span class="sc">!=</span> <span class="dv">0</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">group =</span> <span class="fu">substr</span>(lhs, <span class="fu">nchar</span>(lhs), <span class="dv">1000</span>), <span class="at">item =</span> <span class="fu">substr</span>(lhs, <span class="dv">1</span>, <span class="fu">nchar</span>(lhs) <span class="sc">-</span></span>
@@ -34356,7 +34391,7 @@ fit.lrintercept.wide 903         8317.8     15.011      18     0.6612</code></pr
 <span id="cb67-12"><a href="#cb67-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Domain"</span>, <span class="at">y =</span> <span class="st">"Difference in intercepts (Wave 2 - Wave 1)"</span>,</span>
 <span id="cb67-13"><a href="#cb67-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Difference in latent response intercepts"</span>) <span class="sc">+</span> <span class="fu">theme_classic</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="longitudinal-invariance_files/figure-html/visualize-lrintercept-differences-1.png" class="img-fluid" width="100"></p>
+<p><img src="longitudinal-invariance_files/figure-html/visualize-lrintercept-differences-1.png" class="img-fluid" style="width:100.0%"></p>
 </div>
 <div class="sourceCode cell-code" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>loading.model.lrintercept.est <span class="sc">%&gt;%</span></span>
 <span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(<span class="sc">-</span><span class="fu">desc</span>(est)) <span class="sc">%&gt;%</span></span>
@@ -34563,7 +34598,7 @@ fit.lrintercept.wide 903         8317.8     15.011      18     0.6612</code></pr
 </div>
 <p>Backwards compared to thresholds, a lower mean on the latent response would indicate a lower response on average to the item. Meaning, items with a lower latent response variable average will have a lower average on the observed items, on average. The major gain we get from moving from the observed categorical indicators to the latent respone variables is a easier comparison on a continuous scale as opposed to the observed categorical scale.</p>
 <p>Next, test the multi-group way.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/test-invar-lrintercepts_ebf067e329065da518d7889df39b34a3">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/test-invar-lrintercepts_21b0afb99f245a7961cfa35a9ee2d0b4">
 <div class="sourceCode cell-code" id="cb83"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="do">## scalar invariance</span></span>
 <span id="cb83-2"><a href="#cb83-2" aria-hidden="true" tabindex="-1"></a>syntax.scalar <span class="ot">&lt;-</span> <span class="fu">measEq.syntax</span>(<span class="at">configural.model =</span> mod.config, <span class="at">data =</span> analysis.dat,</span>
 <span id="cb83-3"><a href="#cb83-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ordered =</span> T, <span class="at">parameterization =</span> <span class="st">"delta"</span>, <span class="at">ID.cat =</span> <span class="st">"Wu.Estabrook.2016"</span>, <span class="at">ID.fac =</span> <span class="st">"std.lv"</span>,</span>
@@ -35182,7 +35217,7 @@ fit.lrintercept 492         6810.9     15.482      18     0.6287</code></pre>
 </div>
 <p>Again, more evidence of the equivalence of the latent response variables across waves.</p>
 <p>Investigate residuals</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/lrintercept-residuals_f8567de09c560f38ec6ef575df52b494">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/lrintercept-residuals_7f81a6a76d567a47ba5d41463e64f034">
 <div class="sourceCode cell-code" id="cb89"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a>resid.lrintercept.out <span class="ot">&lt;-</span> lavaan<span class="sc">::</span><span class="fu">resid</span>(fit.lrintercept.wide, <span class="at">type =</span> <span class="st">"cor"</span>)</span>
 <span id="cb89-2"><a href="#cb89-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a>resid.lrintercept <span class="ot">&lt;-</span> <span class="fu">transform_resid_to_dataframe</span>(resid.lrintercept.out) <span class="sc">%&gt;%</span></span>
@@ -44694,11 +44729,11 @@ fit.lrintercept 492         6810.9     15.482      18     0.6287</code></pre>
 <span id="cb90-6"><a href="#cb90-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="sc">-</span><span class="fl">0.15</span>, <span class="at">y =</span> <span class="dv">9</span>, <span class="at">label =</span> <span class="st">"Over estimate"</span>) <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>,</span>
 <span id="cb90-7"><a href="#cb90-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="fl">0.15</span>, <span class="at">y =</span> <span class="dv">9</span>, <span class="at">label =</span> <span class="st">"Under estimate"</span>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="longitudinal-invariance_files/figure-html/lrintercept-residuals-1.png" class="img-fluid" width="100"></p>
+<p><img src="longitudinal-invariance_files/figure-html/lrintercept-residuals-1.png" class="img-fluid" style="width:100.0%"></p>
 </div>
 </div>
 <p>Mod indices</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/lrintercept-mod indices_ec186fee52ae0287af8cf6a8fc03cc89">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/lrintercept-mod indices_28e532850f29e3d1a09bb46f5e7122f6">
 <div class="sourceCode cell-code" id="cb91"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="fu">modindices</span>(fit.lrintercept.wide, <span class="at">sort. =</span> T, <span class="at">maximum.number =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       lhs op   rhs      mi    epc sepc.lv sepc.all sepc.nox
@@ -44728,7 +44763,7 @@ fit.lrintercept 492         6810.9     15.482      18     0.6287</code></pre>
 <section id="test-residual-variance-latent-response-strict-invariance" class="level2">
 <h2 class="anchored" data-anchor-id="test-residual-variance-latent-response-strict-invariance">Test Residual variance (latent response; strict) Invariance</h2>
 <p>Strict invariance for categorical indicators requires assessing the equality of the “scales” or residual variances on the latent response variable. There is a one-to-one relationship between the scale and residual variances of a latent response variable.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-lrvariance-longitudinal_473fef992d66c381212bfaf58410fff1">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-lrvariance-longitudinal_f45ee7cd1abce6e53ce832f798f8e181">
 <div class="sourceCode cell-code" id="cb93"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a>lrvariance.model.wide <span class="ot">&lt;-</span> <span class="st">"</span></span>
 <span id="cb93-2"><a href="#cb93-2" aria-hidden="true" tabindex="-1"></a><span class="st">## ================================================= ##</span></span>
 <span id="cb93-3"><a href="#cb93-3" aria-hidden="true" tabindex="-1"></a><span class="st">## Wave 1</span></span>
@@ -45549,7 +45584,7 @@ fit.lrvariance.wide  924         8465.8     14.657      21     0.8398</code></pr
 </div>
 </div>
 <p>The chi-square test gives evidence of invariance of the latent response scales/variances across waves. This gives strong evidence that we can compare the factors across waves with confidence that the factors at least statistically comparable.</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-lrvariances_f4871eeae36f255f52aa8e4c123a5048">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/invar-test-lrvariances_68b85d0fa1a308d19a7ff72540dc618d">
 <div class="sourceCode cell-code" id="cb97"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb97-1"><a href="#cb97-1" aria-hidden="true" tabindex="-1"></a><span class="do">## strict invariance</span></span>
 <span id="cb97-2"><a href="#cb97-2" aria-hidden="true" tabindex="-1"></a>syntax.strict <span class="ot">&lt;-</span> <span class="fu">measEq.syntax</span>(<span class="at">configural.model =</span> mod.config, <span class="at">data =</span> analysis.dat,</span>
 <span id="cb97-3"><a href="#cb97-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">ordered =</span> T, <span class="at">parameterization =</span> <span class="st">"theta"</span>, <span class="at">ID.cat =</span> <span class="st">"Wu.Estabrook.2016"</span>, <span class="at">ID.fac =</span> <span class="st">"std.lv"</span>,</span>
@@ -46168,7 +46203,7 @@ fit.lrvariance  513         6897.7     12.824      21     0.9147</code></pre>
 </div>
 </div>
 <p>Investigate residuals</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/lrvariance-residuals_6e0ec9170b6e568d3215774be6ed61c8">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/lrvariance-residuals_7f1ba814432c3e41d08062fe95d46e45">
 <div class="sourceCode cell-code" id="cb103"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb103-1"><a href="#cb103-1" aria-hidden="true" tabindex="-1"></a>resid.lrvariance.out <span class="ot">&lt;-</span> lavaan<span class="sc">::</span><span class="fu">resid</span>(fit.lrvariance.wide, <span class="at">type =</span> <span class="st">"cor"</span>)</span>
 <span id="cb103-2"><a href="#cb103-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb103-3"><a href="#cb103-3" aria-hidden="true" tabindex="-1"></a>resid.lrvariance <span class="ot">&lt;-</span> <span class="fu">transform_resid_to_dataframe</span>(resid.lrvariance.out) <span class="sc">%&gt;%</span></span>
@@ -55680,11 +55715,11 @@ fit.lrvariance  513         6897.7     12.824      21     0.9147</code></pre>
 <span id="cb104-6"><a href="#cb104-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="sc">-</span><span class="fl">0.15</span>, <span class="at">y =</span> <span class="dv">9</span>, <span class="at">label =</span> <span class="st">"Over estimate"</span>) <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>,</span>
 <span id="cb104-7"><a href="#cb104-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="fl">0.15</span>, <span class="at">y =</span> <span class="dv">9</span>, <span class="at">label =</span> <span class="st">"Under estimate"</span>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="longitudinal-invariance_files/figure-html/lrvariance-residuals-1.png" class="img-fluid" width="100"></p>
+<p><img src="longitudinal-invariance_files/figure-html/lrvariance-residuals-1.png" class="img-fluid" style="width:100.0%"></p>
 </div>
 </div>
 <p>Mod indices</p>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/lrvariance-mod indices_e32415ae9131817f158fdd4f86aba072">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/lrvariance-mod indices_1496f007243ff66467b8d4ebff1f23b3">
 <div class="sourceCode cell-code" id="cb105"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb105-1"><a href="#cb105-1" aria-hidden="true" tabindex="-1"></a><span class="fu">modindices</span>(fit.lrvariance.wide, <span class="at">sort. =</span> T, <span class="at">maximum.number =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       lhs op   rhs      mi   epc sepc.lv sepc.all sepc.nox
@@ -55713,7 +55748,7 @@ fit.lrvariance  513         6897.7     12.824      21     0.9147</code></pre>
 </section>
 <section id="wrap-up-summary-information" class="level2">
 <h2 class="anchored" data-anchor-id="wrap-up-summary-information">Wrap-Up Summary Information</h2>
-<div class="cell" data-hash="longitudinal-invariance_cache/html/unnamed-chunk-2_8f68461686fa544ed7bbf09ce368f5f3">
+<div class="cell" data-hash="longitudinal-invariance_cache/html/unnamed-chunk-2_2ac0f214ac471ec8079dc6d3f6dd5ff7">
 <div class="sourceCode cell-code" id="cb107"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb107-1"><a href="#cb107-1" aria-hidden="true" tabindex="-1"></a>fit.comp.wide <span class="ot">&lt;-</span> <span class="fu">compareFit</span>(fit.config.wide, fit.threshold.wide, fit.loading.wide,</span>
 <span id="cb107-2"><a href="#cb107-2" aria-hidden="true" tabindex="-1"></a>    fit.lrintercept.wide, fit.lrvariance.wide, <span class="at">argsLRT =</span> <span class="fu">list</span>(<span class="at">method =</span> <span class="st">"satorra.bentler.2010"</span>))</span>
 <span id="cb107-3"><a href="#cb107-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit.comp.wide)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>

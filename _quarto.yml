@@ -9,9 +9,15 @@ website:
         text: Home
       - about.qmd
       - license.qmd
-      - reliability.qmd
-      - test-retest-reliability.qmd
-      - longitudinal-invariance.qmd
+  sidebar: 
+    style: "docked"
+    search: true
+    contents:
+      - section: "Results"
+        contents:
+          - reliability.qmd
+          - test-retest-reliability.qmd
+          - longitudinal-invariance.qmd
           
 format:
   html:

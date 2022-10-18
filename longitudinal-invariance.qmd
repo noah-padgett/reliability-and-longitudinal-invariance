@@ -10,8 +10,8 @@ On this page, longitudinal invariance is discussed in more detail.
 #|cache.comments=T
 
 knitr::opts_chunk$set(
-  autodep = TRUE, cache=TRUE, out.width = 100,
-  fig.width = 6, fig.asp = 0.625,
+  autodep = TRUE, cache=TRUE, out.width = "100%",
+  fig.width = 24, fig.asp = 0.625,
   tidy = 'formatR'
 )
 
