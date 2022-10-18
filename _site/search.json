@@ -1,5 +1,26 @@
 [
   {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "1 + 1\n\n[1] 2"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Home",
+    "section": "",
+    "text": "Longitudinal Invariance"
+  },
+  {
+    "objectID": "license.html",
+    "href": "license.html",
+    "title": "License",
+    "section": "",
+    "text": "Copyright (c) 2022 R. Noah Padgett\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\nTHE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."
+  },
+  {
     "objectID": "longitudinal-invariance.html",
     "href": "longitudinal-invariance.html",
     "title": "Longitudinal Invariance",
@@ -56,13 +77,6 @@
     "text": "Wrap-Up Summary Information\n\nfit.comp.wide <- compareFit(fit.config.wide, fit.threshold.wide, fit.loading.wide, fit.lrintercept.wide, fit.lrvariance.wide, argsLRT = list(method=\"satorra.bentler.2010\"))\nsummary(fit.comp.wide)\n\n################### Nested Model Comparison #########################\nScaled Chi-Squared Difference Test (method = \"satorra.bentler.2010\")\n\nlavaan NOTE:\n    The \"Chisq\" column contains standard test statistics, not the\n    robust test that should be reported per model. A robust difference\n    test is a function of two standard (not robust) statistics.\n \n                      Df AIC BIC  Chisq Chisq diff Df diff Pr(>Chisq)\nfit.config.wide      783         8220.7                              \nfit.threshold.wide   867         8264.0     52.494      84     0.9972\nfit.loading.wide     885         8295.4     11.855      18     0.8546\nfit.lrintercept.wide 903         8317.8     15.011      18     0.6612\nfit.lrvariance.wide  924         8465.8     14.657      21     0.8398\n\n####################### Model Fit Indices ###########################\n                     chisq.scaled df.scaled pvalue.scaled rmsea.scaled\nfit.config.wide         8488.444        783          .000        .089 \nfit.threshold.wide      8725.616        867          .000        .086 \nfit.loading.wide        8565.230        885          .000        .084 \nfit.lrintercept.wide    8520.627        903          .000        .083 \nfit.lrvariance.wide     7348.934†       924          .000        .075†\n                     cfi.scaled tli.scaled  srmr\nfit.config.wide           .914       .906  .056 \nfit.threshold.wide        .912       .913  .056†\nfit.loading.wide          .914       .917  .056 \nfit.lrintercept.wide      .915       .919  .056 \nfit.lrvariance.wide       .928†      .933† .057 \n\n################## Differences in Fit Indices #######################\n                                           df.scaled rmsea.scaled cfi.scaled\nfit.threshold.wide - fit.config.wide              84       -0.004     -0.002\nfit.loading.wide - fit.threshold.wide             18       -0.002      0.002\nfit.lrintercept.wide - fit.loading.wide           18       -0.001      0.001\nfit.lrvariance.wide - fit.lrintercept.wide        21       -0.008      0.013\n                                           tli.scaled  srmr\nfit.threshold.wide - fit.config.wide            0.007 0.000\nfit.loading.wide - fit.threshold.wide           0.004 0.000\nfit.lrintercept.wide - fit.loading.wide         0.002 0.000\nfit.lrvariance.wide - fit.lrintercept.wide      0.014 0.001\n\nfit.comp <- compareFit(fit.config, fit.threshold, fit.loading, fit.lrintercept, fit.lrvariance, argsLRT = list(method=\"satorra.bentler.2010\"))\nsummary(fit.comp)\n\n################### Nested Model Comparison #########################\nScaled Chi-Squared Difference Test (method = \"satorra.bentler.2010\")\n\nlavaan NOTE:\n    The \"Chisq\" column contains standard test statistics, not the\n    robust test that should be reported per model. A robust difference\n    test is a function of two standard (not robust) statistics.\n \n                 Df AIC BIC  Chisq Chisq diff Df diff Pr(>Chisq)\nfit.config      372         6718.7                              \nfit.threshold   456         6762.1     70.403      84     0.8553\nfit.loading     474         6789.0     12.950      18     0.7945\nfit.lrintercept 492         6810.9     15.482      18     0.6287\nfit.lrvariance  513         6897.7     12.824      21     0.9147\n\n####################### Model Fit Indices ###########################\n                chisq.scaled df.scaled pvalue.scaled rmsea.scaled cfi.scaled\nfit.config         9490.142        372          .000        .141       .914 \nfit.threshold      9817.807        456          .000        .129       .912 \nfit.loading        9262.342        474          .000        .123       .917 \nfit.lrintercept    9002.466        492          .000        .118       .920 \nfit.lrvariance     7000.708†       513          .000        .101†      .939†\n                tli.scaled  srmr\nfit.config           .903  .067 \nfit.threshold        .919  .067 \nfit.loading          .926  .067 \nfit.lrintercept      .931  .067†\nfit.lrvariance       .950† .068 \n\n################## Differences in Fit Indices #######################\n                                 df.scaled rmsea.scaled cfi.scaled tli.scaled\nfit.threshold - fit.config              84       -0.012     -0.002      0.016\nfit.loading - fit.threshold             18       -0.006      0.005      0.008\nfit.lrintercept - fit.loading           18       -0.004      0.003      0.005\nfit.lrvariance - fit.lrintercept        21       -0.017      0.019      0.018\n                                  srmr\nfit.threshold - fit.config       0.000\nfit.loading - fit.threshold      0.000\nfit.lrintercept - fit.loading    0.000\nfit.lrvariance - fit.lrintercept 0.001"
   },
   {
-    "objectID": "about.html",
-    "href": "about.html",
-    "title": "About",
-    "section": "",
-    "text": "1 + 1\n\n[1] 2"
-  },
-  {
     "objectID": "reliability.html",
     "href": "reliability.html",
     "title": "Reliability",
@@ -82,12 +96,5 @@
     "title": "Test-Retest Reliability",
     "section": "",
     "text": "#|cache=T\n#|autodept=T\n#|cache.comments=T"
-  },
-  {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Home",
-    "section": "",
-    "text": "Longitudinal Invariance"
   }
 ]
