@@ -9,7 +9,11 @@ On this page, longitudinal invariance is discussed in more detail.
 #|autodept=T
 #|cache.comments=T
 
-knitr::opts_chunk$set(autodep = TRUE, cache=TRUE, out.width = 100)
+knitr::opts_chunk$set(
+  autodep = TRUE, cache=TRUE, out.width = 100,
+  fig.width = 6, fig.asp = 0.625,
+  tidy = 'formatR'
+)
 
 ```
 
@@ -134,7 +138,7 @@ DG3_1 ~~ DG3_2
 
 ```{r invar-test-config}
 
-nPerm<-100 # for testing - for full analysis use 1000/10000
+nPerm<-1000 # for testing - for full analysis use 1000/10000
 
 # robust not available for categorical model
 myAFIs <- c(
@@ -148,7 +152,7 @@ syntax.config <- measEq.syntax(
     configural.model = base_model,
     data = analysis.dat,
     ordered=T,
-    parameterization = "delta", # start with delta-parameterization
+    parameterization = "delta",
     ID.cat = "Wu.Estabrook.2016",
     ID.fac = "std.lv",
     group.equal = "configural",
@@ -163,7 +167,7 @@ summary(fit.config, standardized=T, fit.measures=T)
 # recommend to go get coffee
 out.config <- permuteMeasEq(
   nPermute = nPerm, con = fit.config,
-  AFIs = myAFIs, showProgress = T)
+  AFIs = myAFIs, showProgress = F)
 summary(out.config)
 
 # the code below takes the output from the permutation test and creates a concise plot from which to visualize the results.

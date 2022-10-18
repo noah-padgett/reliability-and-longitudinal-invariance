@@ -2,7 +2,7 @@ set-up	set.seed	source
 read-in	$<-	%>%	::	==	all_of	c	filter	full_join	group_by	HSP ID	keep_case	mutate	n	paste0	person_response_total	pivot_wider	wave
 unnamed-chunk-1	
 model	
-invar-test-config	%>%	..density..	@	~	aes	analysis.dat	as.character	base_model	c	cat	cfa	data.frame	element_blank	element_text	everything	facet_wrap	fit	fit.obs	geom_density	geom_histogram	geom_vline	ggplot	labs	left_join	measEq.syntax	permuteMeasEq	pivot_longer	scale_linetype_manual	summary	T	theme	theme_bw
+invar-test-config	%>%	..density..	@	~	aes	analysis.dat	as.character	base_model	c	cat	cfa	data.frame	element_blank	element_text	everything	F	facet_wrap	fit	fit.obs	geom_density	geom_histogram	geom_vline	ggplot	labs	left_join	measEq.syntax	permuteMeasEq	pivot_longer	scale_linetype_manual	summary	T	theme	theme_bw
 inv-config-wide-fit	cfa	configural.model.wide	summary	T	wide.analysis.data
 config-residuals	$	%>%	::	[<-	~	==	>=	abs	aes	annotate	arrange	as.numeric	colnames	colnames<-	data.frame	desc	facet_wrap	filter	fit.config.wide	for	geom_density	geom_vline	ggplot	if	ifelse	kable	kable_styling	labs	matrix	mutate	next	nrow	paste0	recode	resid	rownames	scroll_box	substr	T	theme_bw	V1_Domain	V2_Domain
 config-mod indices	fit.config.wide	modindices	T
