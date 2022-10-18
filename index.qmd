@@ -3,3 +3,5 @@ title: "Home"
 ---
 
 This is my research website designed to facilitate the dissemination of results from my "Tutorial on test-retest reliability and longitudinal invariance". I have attempted to lay out the information in as straightforward and easy to follow manner so that readers can jump to whichever point they need more information on. You will find that I have been much more verbose in this website than in the accompanying publication. I have found that the results of such studies are difficult write-up so that I completely describe many of the components needed to replicate my work. Therefore, I turned to creating much longer winded (many too long winded at times) websites that accompany my manuscripts so that others can see my work and more readily replicate what I have done.
+
+[Longitudinal Invariance](longitudinal-invariance.html)

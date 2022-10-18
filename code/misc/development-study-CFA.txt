@@ -1,0 +1,1068 @@
+---
+title: "POOLS Development: Confirmatory Factor Analysis"
+author: "R. Noah Padgett, Shan Jiang, Laura Shero, & Todd Kettler"
+date: "2020-11-16"
+output:
+  workflowr::wflow_html:
+    toc: true
+    code_folding: show
+---
+
+# Data
+
+```{r data}
+
+source("code/load_packages.R")
+options(digits=3, max.print = 10000)
+mydata <- read.table("data/data-2020-11-16/pools_data_split2_2020_11_16.txt", sep="\t", header=T)
+
+
+# transform responses to (-2, 2) scale
+mydata[, 7:63] <- apply(mydata[,7:63], 2, function(x){x-3})
+
+```
+
+## Data Summary
+
+```{r data-sum}
+
+use.var <- c(paste0("Q4_",c(1:5,8:11, 15:18)), #13
+             paste0("Q5_",c(1:6, 8, 12)), #8-> 14- 21
+             paste0("Q6_",c(1:8, 11)), #9 -> 22-30
+             paste0("Q7_",c(2, 4:5, 7:8, 12:14))) #31-38
+
+psych::describe(
+  mydata[, use.var]
+)
+
+```
+
+
+# CFA
+
+The hypothesized four-factor solution is shown below.
+
+
+The above model can be convert to code using the below model.
+
+```{r}
+
+mod1 <- "
+EL =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18
+SC =~ Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12
+IN =~ Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+EN =~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+
+EL ~~ EL + SC + IN + EN
+SC ~~ SC + IN + EN
+IN ~~ IN + EN
+EN ~~ EN
+"
+
+mod1.2 <- "
+EL =~ y1 + y2 + y3 + y4 + y5 + y6 + y7 + y8 + y9 + y10 + y11 + y12 + y13
+SC =~ y14 + y15 + y16 + y17 + y18 + y19 + y20 + y21
+IN =~ y22 + y23 + y24 + y25 + y26 + y27 + y28 + y29 + y30
+EN =~ y31 + y32 + y33 + y34 + y35 + y36 + y37 + y38
+
+EL ~~ EL + SC + IN + EN
+SC ~~ SC + IN + EN
+IN ~~ IN + EN
+EN ~~ EN
+"
+
+
+```
+
+
+
+## Maximum Likelihood
+
+### Initial Model
+
+```{r mle1}
+
+
+fit1 <- lavaan::sem(mod1, data=mydata, estimator="MLM")
+summary(fit1, standardized=T, fit.measures=T)
+
+```
+
+### Local Fit Assessment
+
+```{r}
+
+# Residual Analysis
+out <- residuals(fit1, type="cor.bollen")
+kable(out[[2]], format="html", digit=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="800px")
+
+ggcorrplot(out[[2]], type = "lower")
+
+# modification indices
+kable(modindices(fit1, sort = TRUE), format="html", digit=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="800px")
+
+```
+
+### ROPE Probability Approx
+
+```{r rope-prob, warning=FALSE, error=FALSE, message=FALSE}
+
+# set up data
+dat2 <- mydata[, use.var]
+colnames(dat2) <- c(paste0("y", 1:38))
+
+fit1 <- lavaan::sem(mod1.2, data=dat2)
+
+# Probility method
+source("code/utility_functions.R")
+
+# ========================================== #
+# ========================================== #
+#   function: get_prior_dens()
+# ========================================== #
+# use: gets the appropriate prior for the 
+#       parameter of interest
+#
+get_prior_dens <- function(pvalue, pname,...){
+  if(pname %like% 'lambda'){
+    out <- dnorm(pvalue, 0, 1, log=T)
+  }
+  if(pname %like% 'dphi'){
+    out <- dgamma(pvalue, 1, 0.5, log=T)
+  }
+  if(pname %like% 'odphi'){
+    out <- dnorm(pvalue, 0, 1, log=T)
+  }
+  if(pname %like% 'dpsi'){
+    out <- dgamma(pvalue, 1, 0.5, log=T)
+  }
+  if(pname %like% 'odpsi'){
+    out <- dnorm(pvalue, 0, 1, log=T)
+  }
+  if(pname %like% 'eta'){
+    out <- dnorm(pvalue, 0, 10, log=T)
+  }
+  if(pname %like% 'tau'){
+    out <- dnorm(pvalue, 0, 32, log=T)
+  }
+  return(out)
+}
+
+# ========================================== #
+# ========================================== #
+#   function: get_log_post()
+# ========================================== #
+# use: uses the model, parameters, and data to
+#       to calculate log posterior
+#
+# arguments:
+# p        - names vector of parameters
+# sample.data - data frame of raw data
+# cfa.model - list of model components
+#
+get_log_post <- function(p, sample.data, cfa.model,...) {
+  
+  out <- use_cfa_model(p, cov(sample.data), cfa.model)
+  
+  log_lik <- sum(apply(sample.data, 1, dmvnorm,
+                       mean=out[['tau']],
+                       sigma=out[['Sigma']], log=T))
+  
+  log_prior<-0
+  if(length(p)==1){
+    log_prior <- get_prior_dens(p, names(p))
+  } else {
+    i <- 1
+    for(i in 1:length(p)){
+      log_prior <- log_prior + get_prior_dens(p[i], names(p)[i])
+    }
+  }
+  log_post <- log_lik + log_prior
+  log_post
+}
+
+# ========================================== #
+# ========================================== #
+#   function: use_cfa_model()
+# ========================================== #
+# use: take in parameters, data, and model to 
+#         obtain the log-likelihood
+#
+# arguments:
+# theta - vector of parameters being optimized
+# sample.cov - samplecovariance matrix
+# cfa.model - list of model parameters
+use_cfa_model <- function(theta, sample.cov, cfa.model,...){
+  # Compue sample statistics
+  p<-ncol(sample.cov)
+  S<-sample.cov
+  
+  # unpack model
+  lambda <- cfa.model[[1]]
+  phi <- cfa.model[[2]]
+  psi <- cfa.model[[3]]
+  #tau <- cfaModel[[4]]
+  #eta <- cfaModel[[5]]
+  
+  # number factor loadings
+  lam.num <- length(which(is.na(lambda)))
+  lambda[which(is.na(lambda))] <- theta[1:lam.num]
+  nF = ncol(lambda)
+  # number elements in factor (co)variance matrix
+  phi.num <- length(which(is.na(phi)))
+  dphi.num <- sum(is.na(diag(phi))==T)
+  odphi.num <- sum(is.na(phi[lower.tri(phi)])==T)
+  if(phi.num > 0){
+    if(dphi.num == 0){
+      phi[which(is.na(phi))] <- theta[(lam.num+1):(lam.num+phi.num)]
+    } else {
+      diag(phi) <- theta[(lam.num+1):(lam.num+dphi.num)]
+      phi[which(is.na(phi))] <- theta[(lam.num+dphi.num+1):(lam.num+phi.num)]
+    }
+  }
+  phi <- low2full(phi) # map lower to upper
+  
+  # number elements in error (co)variance matrix
+  psi.num <- length(which(is.na(psi)))
+  dpsi.num <- sum(is.na(diag(psi))==T)
+  odpsi.num <- sum(is.na(psi[lower.tri(psi)])==T)
+  if(psi.num > 0){
+    if(dpsi.num == 0){
+      psi[which(is.na(psi))] <- theta[(lam.num+1):(lam.num+psi.num)]
+    } else {
+      diag(psi) <- theta[(lam.num+1):(lam.num+dpsi.num)]
+      psi[which(is.na(psi))] <- theta[(lam.num+dpsi.num+1):(lam.num+psi.num)]
+    }
+  }
+  psi <- low2full(psi)
+  # number of factor scores
+  #eta.num <- length(eta)
+  #eta <- matrix(theta[(lam.num+phi.num+psi.num+tau.num+1):(lam.num+phi.num+psi.num+tau.num+eta.num)],
+  #              nrow=nF)
+  # mean center eta
+  #for(i in 1:nF){
+  #  eta[i, ] <- eta[i,] - mean(eta[,i])
+  #}
+  
+  # # number of intercepts
+  # tau.num <- length(tau)
+  # tau <- matrix(theta[(lam.num+phi.num+psi.num+1):(lam.num+phi.num+psi.num+tau.num)], ncol=1)
+  # tau <- repeat_col(tau, ncol(eta))
+  
+  # compute model observed outcomes
+  #Y <- tau + lambda%*%eta
+  tau <- numeric(p)
+  # compute model implied (co)variance matrix
+  Sigma<-lambda%*%phi%*%(t(lambda)) + psi
+  
+  #return fit value 
+  out <- list(Sigma, lambda, phi, psi, tau)
+  names(out) <- c('Sigma', 'lambda', 'phi', 'psi', 'tau')
+  return(out)
+}
+
+
+
+# ========================================== #
+# ========================================== #
+#   function: laplace_local_fit()
+# ========================================== #
+# use: uses the fittes lavaan object to run
+#       the proposed method
+#
+# arguments:
+# fit       - fitted lavaan model
+# standardized - logical for whether to standardize
+# cut.load  - cutoff for value of loading to care about default = 0.3 
+# cut.cov   - cutoff for value of covariances to care about default = 0.1
+# opt       - list of parameters to pass to interior functions
+# sum.print - logical indicator of whether to print the summary table upon completion
+# counter   - logical indicator of whether to print out a (.) after each
+#               parameter is completed
+#
+#laplace_local_fit <- function(fit, cut.load = 0.3, cut.cov = 0.1, standardize=T,
+#                              opt=list(scale.cov=1, no.samples=1000),
+#                              all.parameters=F,
+#                              sum.print=F, pb=T,...){
+  
+  
+fit=fit1
+cut.load = 0.3
+cut.cov = 0.2
+standardize=T
+opt=list(scale.cov=1, no.samples=3)
+all.parameters=F
+sum.print=F
+pb=F
+                              
+  # Observed Data
+  sampleData <- fit@Data@X[[1]]
+  # sample covariance matrix
+  sampleCov <- fit@SampleStats@cov[[1]]
+  
+  # extract model
+  extractedLavaan <- lavMatrixRepresentation(partable(fit))
+  
+  factNames <- unique(extractedLavaan[extractedLavaan[,"mat"]=="lambda", "lhs"])
+  varNames <- unique(extractedLavaan[extractedLavaan[,"mat"]=="lambda", "rhs"])
+  # extract factor loading matrix
+  lambda <- extractedLavaan[ extractedLavaan$mat == "lambda" ,]
+  lambda <- convert2matrix(lambda$row, lambda$col, lambda$est)
+  colnames(lambda) <- factNames
+  rownames(lambda) <- varNames
+  # extract factor covariance matrix
+  phi <- extractedLavaan[ extractedLavaan$mat == "psi" ,]
+  phi <- convert2matrix(phi[,'row'], phi[,'col'], phi[,'est'])
+  phi <- up2full(phi)
+  colnames(phi) <- rownames(phi) <- factNames
+  # extract error covariance matrix
+  psi <- extractedLavaan[ extractedLavaan$mat == "theta" ,]
+  psi <- convert2matrix(psi[,'row'], psi[,'col'], psi[,'est'])
+  psi[upper.tri(psi)] <- 0
+  colnames(psi) <- rownames(psi) <- varNames
+  
+  
+  # need to create list of all NA parameters in the above matrices
+  
+  if(all.parameters == T){
+    lambdaA <- lambda
+    phiA <- phi
+    psiA <- psi
+    
+    lambdaA[!is.na(lambdaA)] <- NA
+    phiA[!is.na(phiA)] <- NA
+    psiA[!is.na(psiA)] <- NA
+    
+  } else{
+    lambdaA <- lambda
+    phiA <- phi
+    psiA <- psi
+    
+  }
+  
+  lamList <- as.matrix(which(is.na(lambdaA), arr.ind = T))
+  il <- nrow(lamList)
+  phiList <- as.matrix(which(is.na(phiA), arr.ind = T))
+  ip <- il + nrow(phiList)
+  psiList <- as.matrix(which(is.na(psiA), arr.ind = T))
+  it <- ip + nrow(psiList)
+  modList <- rbind(lamList, phiList, psiList)
+  # number of variables
+  # create names for each condition
+  vnlamList <- lamList
+  vnlamList[,2] <- paste0(factor(vnlamList[,2], levels = order(unique(vnlamList[,2])),labels=factNames))
+  vnlamList[,1] <- rownames(lamList)
+  vnlamList[,2] <- paste0(vnlamList[,2],"=~",vnlamList[,1])
+  vnphiList <- phiList
+  if(nrow(phiList)>0){
+    vnphiList[,1] <- paste0(factor(phiList[,1], levels = order(unique(vnphiList[,1])),labels=factNames))
+    vnphiList[,2] <- paste0(factor(phiList[,2], levels = order(unique(phiList[,2])),labels=factNames))
+  }
+  vnpsiList <- psiList
+  vnpsiList[,1] <- rownames(psiList)
+  vnpsiList[,2] <- paste0(vnpsiList[,1],"~~y", psiList[,2])
+  nameList <- rbind(vnlamList, vnphiList, vnpsiList)
+  # ========================================================== #
+  # ========================================================== #
+  # iterate around this function
+  fitResults <- matrix(nrow=opt[[2]], ncol=it)
+  # progress bar
+  if(pb==T) progress_bar <- txtProgressBar(min = 0, max = it, style = 3)
+  iter <- 1
+  for(iter in 1:it){
+    
+    # extract iteration information from modList
+    x <- modList[iter, ]
+    
+    # do we need to update lambda?
+    if(iter <= il){
+      Q <- lambda
+      Q[is.na(Q)] <- 0
+      Q[x[1], x[2]] <- NA
+      lambdaMod <- Q
+    } else {
+      Q <- lambda
+      Q[is.na(Q)] <- 0
+      lambdaMod <- Q
+    }
+    
+    # update phi?
+    if(iter > il & iter <= ip){
+      Q <- phi
+      Q[is.na(Q)] <- 0
+      Q[x[1], x[2]] <- NA
+      phiMod <- Q
+    } else {
+      Q <- phi
+      Q[is.na(Q)] <- 0
+      phiMod <- Q
+    }
+    
+    # update psi?
+    if(iter > ip){
+      Q <- psi
+      Q[is.na(Q)] <- 0
+      Q[x[1], x[2]] <- NA
+      psiMod <- Q
+    } else {
+      Q <- psi
+      Q[is.na(Q)] <- 0
+      psiMod <- Q
+    }
+    
+    # combine into a single list
+    cfaModel <- list(lambdaMod, phiMod, psiMod) #, tauMod, etaMod
+    
+    #print(cfaModel)
+    # get starting values
+    inits <- get_starting_values(cfaModel) 
+    
+    # use optim() to run simulation
+    fit <- optim(inits, get_log_post, control = list(fnscale = -1),
+                 hessian = TRUE,
+                 sample.data=sampleData, cfa.model=cfaModel)
+    param_mean <- fit$par # numerical deriv
+    # compute hess at param_mean
+    #hess <- numDeriv::hessian(model, param_mean, ...)
+    #param_cov_mat <- solve(-hess)
+    param_cov_mat <- solve(-fit$hessian)
+    
+    # scaled covariance matrix (artifically inflate uncertainty)
+    scale.cov = opt[[1]]
+    A <- diag(scale.cov, nrow=nrow(param_cov_mat), ncol=ncol(param_cov_mat))
+    param_cov_mat <- A%*%param_cov_mat%*%t(A)
+    
+    # sample
+    no.samples=opt[[2]]
+    fitResults[,iter] <- mcmc(rmvnorm(no.samples, param_mean, param_cov_mat))
+    
+    if(pb == T) setTxtProgressBar(progress_bar, iter)
+  }
+  # ========================================================== #
+  # ========================================================== #
+  
+  colnames(fitResults) <- nameList[,2, drop=T]
+  fitResults.unstd <- fitResults
+  # Next, standardized (if desired) default
+  if(standardize==T){
+    # standardize
+    obs.var <- extractedLavaan[extractedLavaan[,"mat"]=="theta", ]
+    obs.var <- obs.var[which(obs.var$lhs == obs.var$rhs), c("lhs", "est")]
+    
+    fct.var <- extractedLavaan[extractedLavaan[,"mat"]=="psi", ]
+    fct.var <- fct.var[which(fct.var$lhs == fct.var$rhs), c("lhs", "est")]
+    
+    all.var <- rbind(obs.var, fct.var)
+    
+    fitResults <- fitResults
+    p <- colnames(fitResults)
+    i <- 1
+    for(i in 1:length(p)){
+      unstd <- fitResults[,i]
+      
+      if(p[i] %like% "=~"){
+        pp <- strsplit(p[i], "=~") %>% unlist()
+        sigjj <- sqrt(all.var[all.var[,1] == pp[1], 2])
+        sigii <- sqrt(all.var[all.var[,1] == pp[2], 2])
+        std <- unstd*sqrt(sigjj/sigii) # bollen (1989, p. 349)
+      }
+      
+      if(p[i] %like% "~~"){
+        pp <- strsplit(p[i], "~~") %>% unlist()
+        sigjj <- sqrt(all.var[all.var[,1] == pp[1], 2])
+        sigii <- sqrt(all.var[all.var[,1] == pp[2], 2])
+        std <- unstd/(sigjj * sigii) # bollen (1989, p. 349)
+      }
+      
+      fitResults[,i] <- std
+    }
+  }
+  # now, compute and format summary statistics
+  sumResults <- data.frame(matrix(nrow=ncol(fitResults), ncol=9))
+  colnames(sumResults) <- c("Parameter","Prob", "mean", "sd", "p0.025", "p0.25", "p0.5", "p0.75", "p0.975")
+  sumResults[,1] <- colnames(fitResults)
+  
+  sumResults[,3:9] <- t(apply(fitResults, 2, function(x){
+    c(mean(x, na.rm=T), sd(x, na.rm=T),
+      quantile(x, c(0.025, 0.25, 0.5, 0.75, 0.975), na.rm=T))
+  }))
+  
+  # compute probability of meaningfulness
+  # depends on parameter
+  # cut.load = 0.3
+  # cut.cov = 0.1
+  p <- colnames(fitResults)
+  for(i in 1:ncol(fitResults)){
+    x <- fitResults[,i, drop=T]
+    if(p[i] %like% "=~"){
+      pv <- mean(ifelse(abs(x) >= cut.load, 1, 0))
+    }
+    if(p[i] %like% "~~"){
+      pv <- mean(ifelse(abs(x) >= cut.cov, 1, 0))
+    }
+    sumResults[i, 2] <- pv
+  }
+  sumResults <- arrange(sumResults, desc(Prob))
+  colnames(sumResults) <- c("Parameter","Pr(|theta|>cutoff)", "mean", "sd", "p0.025", "p0.25", "p0.5", "p0.75", "p0.975")
+  sumResults[,2:9] <- round(sumResults[,2:9], 3)
+
+  # extract unstandardized results
+  sumResults.unstd <- data.frame(matrix(nrow=ncol(fitResults.unstd), ncol=9))
+  colnames(sumResults.unstd) <- c("Parameter","Prob", "mean", "sd", "p0.025", "p0.25", "p0.5", "p0.75", "p0.975")
+  sumResults.unstd[,1] <- colnames(fitResults.unstd)
+  
+  sumResults.unstd[,3:9] <- t(apply(fitResults.unstd, 2, function(x){
+    c(mean(x, na.rm=T), sd(x, na.rm=T),
+      quantile(x, c(0.025, 0.25, 0.5, 0.75, 0.975), na.rm=T))
+  }))
+  
+  # compute probability of meaningfulness
+  # depends on parameter
+  # cut.load = 0.3
+  # cut.cov = 0.1
+  p <- colnames(fitResults.unstd)
+  for(i in 1:ncol(fitResults.unstd)){
+    x <- fitResults.unstd[,i, drop=T]
+    if(p[i] %like% "=~"){
+      pv <- mean(ifelse(abs(x) >= cut.load, 1, 0))
+    }
+    if(p[i] %like% "~~"){
+      pv <- mean(ifelse(abs(x) >= cut.cov, 1, 0))
+    }
+    sumResults.unstd[i, 2] <- pv
+  }
+  sumResults.unstd <- arrange(sumResults.unstd, desc(Prob))
+  colnames(sumResults.unstd) <- c("Parameter","Pr(|theta|>cutoff)", "mean", "sd", "p0.025", "p0.25", "p0.5", "p0.75", "p0.975")
+  sumResults.unstd[,2:9] <- round(sumResults.unstd[,2:9], 3)
+  
+#  return(out)
+#}
+
+
+
+#out.lplf <- laplace_local_fit(fit = fit1, standardize = T, opt=list(scale.cov=1, no.samples=10))
+
+# change variable names back
+orig.names <- c(use.var, "EL", "EN", "SC", "IN")
+mod.names <- c(paste0("y", 1:38), "EL", "EN", "SC", "IN")
+i <- 1
+for(i in 1:nrow(sumResults)){
+  p <- sumResults[i, 1]
+  if(p %like% "=~"){
+    p0 <- strsplit(p, "=~")[[1]]
+    p0[1] <- orig.names[mod.names == p0[1]]
+    p0[2] <- orig.names[mod.names == p0[2]]
+    sumResults[i, 1] <- paste0(p0[1], "=~", p0[2]) 
+  }
+  if(p %like% "~~"){
+    p0 <- strsplit(p, "~~")[[1]]
+    p0[1] <- orig.names[mod.names == p0[1]]
+    p0[2] <- orig.names[mod.names == p0[2]]
+    sumResults[i, 1] <- paste0(p0[1], "~~", p0[2]) 
+  }
+}
+# unstadnardized results
+i <- 1
+for(i in 1:nrow(sumResults.unstd)){
+  p <- sumResults.unstd[i, 1]
+  if(p %like% "=~"){
+    p0 <- strsplit(p, "=~")[[1]]
+    p0[1] <- orig.names[mod.names == p0[1]]
+    p0[2] <- orig.names[mod.names == p0[2]]
+    sumResults.unstd[i, 1] <- paste0(p0[1], "=~", p0[2]) 
+  }
+  if(p %like% "~~"){
+    p0 <- strsplit(p, "~~")[[1]]
+    p0[1] <- orig.names[mod.names == p0[1]]
+    p0[2] <- orig.names[mod.names == p0[2]]
+    sumResults.unstd[i, 1] <- paste0(p0[1], "~~", p0[2]) 
+  }
+}
+
+```
+
+```{r rope-prob-results}
+
+kable(sumResults, format="html", digits=3,caption = "ROPE Probability Approximation based on STANDARDIZED Parameter Estimates")%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="600px")
+  
+```
+
+
+```{r rope-prob-results-unst}
+
+kable(sumResults, format="html", digits=3,caption = "ROPE Probability Approximation based on UNstandardized Parameter Estimates")%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="600px")
+  
+```
+
+### Modified Model
+
+```{r}
+
+mod2 <- "
+EL =~ Q4_3 + Q4_4 + Q4_5 + Q4_9 + Q4_11 + Q4_15 + Q4_18
+SC =~ Q5_1 + Q5_2 + Q5_3 + Q5_5 + Q5_6 + Q5_12
+IN =~ Q6_2 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+EN =~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_14
+
+EL ~~ EL + SC + IN + EN
+SC ~~ SC + IN + EN
+IN ~~ IN + EN
+EN ~~ EN
+
+Q4_3 ~~ Q4_4
+Q5_5 + Q5_2 ~~ Q5_6
+Q6_2 ~~ Q6_8
+Q7_7 ~~ Q7_8
+"
+
+fit2 <- lavaan::cfa(mod2, data=mydata, estimator = "MLM")
+summary(fit2, standardized=T, fit.measures=T)
+
+```
+
+Next, use the Vuong test of nonnested models to compare the relative fit.
+
+```{r}
+
+fit1 <- lavaan::cfa(mod1, data=mydata)
+fit2 <- lavaan::cfa(mod2, data=mydata)
+
+nonnest2::vuongtest(fit1, fit2)
+
+```
+
+### Final Model with Reliability Estimates
+
+```{r}
+
+mod3 <- "
+EL =~ 1*Q4_3 + lam44*Q4_4 + lam45*Q4_5 + lam49*Q4_9 + lam411*Q4_11 + lam415*Q4_15 + lam418*Q4_18
+SC =~ 1*Q5_1 + lam52*Q5_2 + lam53*Q5_3 + lam55*Q5_5 + lam56*Q5_6 + lam512*Q5_12
+IN =~ 1*Q6_2 + lam65*Q6_5 + lam66*Q6_6 + lam67*Q6_7 + lam68*Q6_8 + lam611*Q6_11
+EN =~ 1*Q7_2 + lam74*Q7_4 + lam75*Q7_5 + lam77*Q7_7 + lam78*Q7_8 + lam714*Q7_14
+
+# Factor covarainces
+EL ~~ EL + SC + IN + EN
+SC ~~ SC + IN + EN
+IN ~~ IN + EN
+EN ~~ EN
+
+# Item residual variances
+Q4_3 ~~ psi43*Q4_3
+Q4_4 ~~ psi44*Q4_4
+Q4_5 ~~ psi45*Q4_5
+Q4_9 ~~ psi49*Q4_9
+Q4_11 ~~ psi411*Q4_11
+Q4_15 ~~ psi415*Q4_15
+Q4_18 ~~ psi418*Q4_18
+Q5_1 ~~ psi51*Q5_1
+Q5_2 ~~ psi52*Q5_2
+Q5_3 ~~ psi53*Q5_3
+Q5_5 ~~ psi55*Q5_5
+Q5_6 ~~ psi56*Q5_6
+Q5_12 ~~ psi512*Q5_12
+Q6_2 ~~ psi62*Q6_2
+Q6_5 ~~ psi65*Q6_5
+Q6_6 ~~ psi66*Q6_6
+Q6_7 ~~ psi67*Q6_7
+Q6_8 ~~ psi68*Q6_8
+Q6_11 ~~ psi611*Q6_11
+Q7_2 ~~ psi72*Q7_2
+Q7_4 ~~ psi74*Q7_4
+Q7_5 ~~ psi75*Q7_5
+Q7_7 ~~ psi77*Q7_7
+Q7_8 ~~ psi78*Q7_8
+Q7_14 ~~ psi714*Q7_14
+
+Q4_3 ~~ Q4_4
+Q5_5 + Q5_2 ~~ Q5_6
+Q6_2 ~~ Q6_8
+Q7_7 ~~ Q7_8
+
+# Factor Reliabilities
+rEL := (1**2 + lam44**2 + lam45**2 + lam49**2 + lam411**2 + lam415**2 + lam418**2)/(1**2 + lam44**2 + lam45**2 + lam49**2 + lam411**2 + lam415**2 + lam418**2 + psi43 + psi44 + psi45 + psi49 + psi411 + psi415 + psi418)
+rSC := (1 + lam52**2 + lam53**2 + lam55**2 + lam56**2 + lam512**2)/(1 + lam52**2 + lam53**2 + lam55**2 + lam56**2 + lam512**2 + psi51 + psi52 + psi53 + psi55 + psi56 + psi512)
+rIN := (1**2 + lam65**2 + lam66**2 + lam67**2 + lam68**2 + lam611**2)/(1**2 + lam65**2 + lam66**2 + lam67**2 + lam68**2 + lam611**2 + psi62 + psi65 + psi66 + psi67 + psi68 + psi611)
+rEN := (1**2 + lam74**2 + lam75**2 + lam77**2 + lam78**2 + lam714**2)/(1**2 + lam74**2 + lam75**2 + lam77**2 + lam78**2 + lam714**2 + psi72 + psi74 + psi75 + psi77 + psi78 + psi714)
+"
+
+fit3 <- lavaan::cfa(mod3, data=mydata, estimator = "MLM")
+summary(fit3, standardized=T, fit.measures=T)
+
+
+# export
+parameterEstimates(fit3,standardized = T, output = "pretty")
+#a <- parameterEstimates(fit3,standardized = T, output = "text")
+#write.csv(
+#  a, "output/cfa_results.csv"
+#)
+```
+
+
+### Best fitting model
+
+The following model was were used to obtain a "best" fitting model even if it is un-interpretable.
+Basic, the goal was to find a model that got the $\chi^2$ to be no-significant.
+
+```{r}
+# final model (reported in manuscript)
+mod4 <- "
+EL =~ Q4_3 + Q4_4 + Q4_5 + Q4_9 + Q4_11 + Q4_15 + Q4_18
+SC =~ Q5_1 + Q5_2 + Q5_3 + Q5_5 + Q5_6 + Q5_12
+IN =~ Q6_2 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+EN =~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_14
+
+EL ~~ EL + SC + IN + EN
+SC ~~ SC + IN + EN
+IN ~~ IN + EN
+EN ~~ EN
+
+Q4_3 ~~ Q4_4
+Q5_5 + Q5_2 ~~ Q5_6
+Q6_2 ~~ Q6_8
+Q7_7 ~~ Q7_8
+"
+fit4 <- lavaan::cfa(mod4, data=mydata, estimator = "MLM")
+summary(fit4, standardized=T, fit.measures=T)
+
+# Residual Analysis
+out <- residuals(fit4, type="cor.bollen")
+kable(out[[2]], format="html", digit=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="800px")
+
+ggcorrplot(out[[2]], type = "lower")
+
+# modification indices
+kable(modindices(fit4, sort = TRUE), format="html", digit=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="800px")
+
+# Revised to be "best fitting"
+mod5 <- "
+EL =~ Q4_3 + Q4_4 + Q4_5 + Q4_9 + Q4_11 + Q4_15 + Q4_18 + Q5_1
+SC =~ Q5_1 + Q5_2 + Q5_3 + Q5_5 + Q5_6 + Q5_12 + Q7_14
+IN =~ Q6_2 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q5_12 + Q7_7
+EN =~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_14 + Q6_11 + Q4_11 + Q4_4
+
+EL ~~ EL + SC + IN + EN
+SC ~~ SC + IN + EN
+IN ~~ IN + EN
+EN ~~ EN
+
+Q4_3 ~~ Q7_5 + Q6_11
+Q4_4 ~~ Q6_11
+Q4_3 + Q5_1 ~~ Q4_4
+Q4_9 ~~ Q4_3 + Q7_2
+
+Q5_5 ~~ Q5_6 + Q7_14
+Q5_2 ~~ Q5_6 + Q7_8
+Q6_2 ~~ Q6_8
+Q6_11 + Q4_11 ~~  Q7_5
+Q7_7 ~~ Q7_8
+
+"
+fit5 <- lavaan::cfa(mod5, data=mydata, estimator = "MLM")
+summary(fit5, standardized=T, fit.measures=T)
+
+# Residual Analysis
+out <- residuals(fit5, type="cor.bollen")
+kable(out[[2]], format="html", digit=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="800px")
+
+ggcorrplot(out[[2]], type = "lower")
+
+# modification indices
+kable(modindices(fit5, sort = TRUE), format="html", digit=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="800px")
+
+```
+
+
+## DWLS
+
+### Initial Model
+
+```{r}
+
+mod1 <- "
+EL =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18
+SC =~ Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12
+IN =~ Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+EN =~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+
+EL ~~ EL + SC + IN + EN
+SC ~~ SC + IN + EN
+IN ~~ IN + EN
+EN ~~ EN
+"
+
+fit1 <- lavaan::cfa(mod1, data=mydata, ordered=T)
+summary(fit1, standardized=T, fit.measures=T)
+
+```
+
+### Local Fit Assessment
+
+```{r}
+
+# Residual Analysis
+out <- residuals(fit1, type="cor.bollen")
+kable(out[[2]], format="html", digit=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="800px")
+
+ggcorrplot(out[[2]], type = "lower")
+
+# modification indices
+kable(modindices(fit1, sort = TRUE), format="html", digit=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="800px")
+```
+
+
+### Modified Model
+
+```{r}
+
+mod2 <- "
+EL =~ Q4_3 + Q4_4 + Q4_5 + Q4_9 + Q4_11 + Q4_15 + Q4_18
+SC =~ Q5_1 + Q5_2 + Q5_3 + Q5_5 + Q5_6 + Q5_12
+IN =~ Q6_2 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+EN =~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_14
+
+EL ~~ EL + SC + IN + EN
+SC ~~ SC + IN + EN
+IN ~~ IN + EN
+EN ~~ EN
+"
+
+fit2 <- lavaan::cfa(mod2, data=mydata, ordered=T)
+summary(fit2, standardized=T, fit.measures=T)
+
+```
+
+
+## MIIV
+
+```{r}
+
+# get the model implied instrumental variables
+miivs(mod1)
+
+
+fit1 <- MIIVsem::miive(mod1, data=mydata)
+summary(fit1)
+
+```
+
+
+```{r}
+
+# get the model implied instrumental variables
+miivs(mod2)
+
+
+fit2 <- MIIVsem::miive(mod2, data=mydata)
+summary(fit2)
+
+```
+
+## MIIV Categorical
+
+```{r miiv-cat}
+
+fit1 <- MIIVsem::miive(
+  mod1, data=mydata,
+  ordered=c(
+    paste0("Q4_",c(1:5,8:11, 15:18)),
+    paste0("Q5_",c(1:6, 8, 12)),
+    paste0("Q6_",c(1:8, 11)),
+    paste0("Q7_",c(2, 4:5, 7:8, 12:14))
+  )
+)
+summary(fit1)
+
+```
+
+
+## PLS
+
+
+```{r pls}
+
+# transform responses to (-2, 2) scale
+#mydata[, 7:63] <- apply(mydata[,7:63], 2, as.factor)
+mod.pls <- "
+# Hypothesized model
+EL =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18
+SC =~ Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12
+IN =~ Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+EN =~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+
+EL ~~ 1*EL + SC + IN + EN
+SC ~~ 1*SC + IN + EN
+IN ~~ 1*IN + EN
+EN ~~ 1*EN
+
+# Penalized terms
+# cross loadings
+pen() * EL =~  Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * SC =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * IN =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * EN =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+
+"
+fit.pls <- lslx::plsem(
+  model = mod.pls,
+  data = mydata,
+  loss = "uls",
+  penalty_method = "mcp",
+  lambda_grid = seq(.02, 1, .02), 
+  delta_grid = c(1.5, 3.0, Inf)
+)
+
+fit.pls$plot_numerical_condition()
+fit.pls$plot_information_criterion()
+fit.pls$plot_fit_index()
+summary(fit.pls, selector = "rbic")
+
+
+```
+
+
+```{r pls-wrcorr}
+
+# transform responses to (-2, 2) scale
+#mydata[, 7:63] <- apply(mydata[,7:63], 2, as.factor)
+mod.pls <- "
+# Hypothesized model
+EL =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18
+SC =~ Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12
+IN =~ Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+EN =~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+
+EL ~~ 1*EL + SC + IN + EN
+SC ~~ 1*SC + IN + EN
+IN ~~ 1*IN + EN
+EN ~~ 1*EN
+
+# Penalized terms
+# cross loadings
+pen() * EL =~  Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * SC =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * IN =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * EN =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+
+# residual covariances
+pen() * Q4_1 ~~ Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q4_2 ~~ Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() *  Q4_3 ~~ Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() *  Q4_4 ~~ Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() *  Q4_5 ~~ Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() *  Q4_8 ~~ Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() *  Q4_9 ~~ Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+ pen() * Q4_10 ~~ Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q4_11 ~~ Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q4_15 ~~ Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q4_16 ~~ Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q4_17 ~~ Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q4_18 ~~ Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q5_1 ~~ Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q5_2 ~~ Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q5_3 ~~ Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q5_4 ~~ Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q5_5 ~~ Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q5_6 ~~ Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q5_8 ~~ Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q5_12 ~~ Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q6_1 ~~ Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q6_2 ~~ Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q6_3 ~~ Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q6_4 ~~ Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q6_5 ~~ Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q6_6 ~~ Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q6_7 ~~ Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q6_8 ~~ Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q6_11 ~~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q7_2 ~~ Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q7_4 ~~ Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q7_5 ~~ Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q7_7 ~~ Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * Q7_8 ~~ Q7_12 + Q7_13 + Q7_14
+pen() * Q7_12 ~~ Q7_13 + Q7_14
+pen() * Q7_13 ~~ Q7_14
+"
+fit.pls <- lslx::plsem(
+  model = mod.pls,
+  data = mydata,
+  loss = "uls",
+  penalty_method = "mcp",
+  lambda_grid = seq(.02, 1, .02), 
+  delta_grid = c(1.5, 3.0, Inf)
+)
+
+fit.pls$plot_numerical_condition()
+fit.pls$plot_information_criterion()
+
+summary(fit.pls, selector = "rbic")
+
+
+```
+
+## PLS Categorical
+
+```{r pls-cat}
+mod.pls <- "
+# Hypothesized model
+EL =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18
+SC =~ Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12
+IN =~ Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+EN =~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+
+EL ~~ 1*EL + SC + IN + EN
+SC ~~ 1*SC + IN + EN
+IN ~~ 1*IN + EN
+EN ~~ 1*EN
+
+# Penalized terms
+# cross loadings
+pen() * EL =~  Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * SC =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * IN =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_12 + Q7_13 + Q7_14
+pen() * EN =~ Q4_1 + Q4_2 + Q4_3 + Q4_4 + Q4_5 + Q4_8 + Q4_9 + Q4_10 + Q4_11 + Q4_15 + Q4_16 + Q4_17 + Q4_18 + Q5_1 + Q5_2 + Q5_3 + Q5_4 + Q5_5 + Q5_6 + Q5_8 + Q5_12 + Q6_1 + Q6_2 + Q6_3 + Q6_4 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+
+"
+
+fit.pls <- lslx::plsem(
+  model = mod.pls,
+  data = mydata,
+  ordered_variable = c(
+    paste0("Q4_",c(1:5,8:11, 15:18)),
+    paste0("Q5_",c(1:6, 8, 12)),
+    paste0("Q6_",c(1:8, 11)),
+    paste0("Q7_",c(2, 4:5, 7:8, 12:14))
+  ),
+  loss = "uls",
+  penalty_method = "mcp"
+)
+
+
+summary(fit.pls, selector = "rbic")
+
+
+```
+
+
+
+

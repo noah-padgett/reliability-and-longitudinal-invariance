@@ -1,0 +1,456 @@
+---
+title: "POOLS Development: Exploratory Factor Analysis"
+author: "Shan Jiang, Laura Shero, R. Noah Padgett, & Todd Kettler"
+date: "2020-11-19"
+output:
+  workflowr::wflow_html:
+    toc: true
+    code_folding: hide
+---
+
+
+# Prior Expectations
+
+Prior to conducting the EFA, we expect that the four factors will emerge from a four-factor solution.
+
+# Data
+
+```{r data, warning=F, error=F, message=F}
+
+source("code/load_packages.R")
+
+mydata <- read.table("data/data-2020-11-16/pools_data_split1_2020_11_16.txt", sep="\t", header=T)
+dat <- mydata[,7:63]
+cov.dat <- cov(dat)
+
+# setup output object
+out.dat <- data.frame(matrix(0, nrow=57, ncol=10))
+rownames(out.dat) <- colnames(dat)
+colnames(out.dat) <- c("Diff", "SD", "ITCc", "ITCT", "f1", "f2", "f3", "f4", "h2", "u2")
+
+```
+
+
+# Item Analysis
+
+For the basic item analysis, we conducted these by the a priori item groups to get a sense of how the initially proposed items fit together.
+
+## All Items
+
+```{r item-analysis-all}
+
+fit <- psychometric::item.exam(dat)
+
+kable(fit[,c(1:4,7:8)], format="html", digits=3) %>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%")
+
+
+out.dat[, c(1,2, 4)] <- fit[, c(4, 1, 3)]
+
+```
+
+## Initial Effective Learning Items
+
+### Item Analysis
+
+```{r item-analysis-el-item}
+
+# item analysis
+fit <- psychometric::item.exam(dat[, paste0("Q4_",1:19)])
+
+kable(fit[,c(1:4,7:8)], format="html", digits=3) %>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%")
+
+out.dat[1:19, 3] <- fit[, 3]
+
+```
+
+### Preliminary Reliability
+
+```{r item-analysis-el-rel}
+# preliminary reliability
+psych::alpha(dat[, paste0("Q4_",1:19)])
+
+```
+
+## Initial Student Centered Items
+
+### Item Analayis
+
+```{r item-analysis-sc-item}
+
+# item analysis
+fit <- psychometric::item.exam(dat[, paste0("Q5_",1:12)])
+
+kable(fit[,c(1:4,7:8)], format="html", digits=3) %>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%")
+
+out.dat[20:31, 3] <- fit[, 3]
+
+```
+
+### Preliminary Reliability
+
+```{r item-analysis-sc-rel}
+# preliminary reliability
+psych::alpha(dat[, paste0("Q5_",1:12)])
+
+```
+
+
+## Initial Interactive Items
+
+### Item Analysis
+
+```{r item-analysis-int-item}
+
+# item analysis
+fit <- psychometric::item.exam(dat[, paste0("Q6_",1:11)])
+
+kable(fit[,c(1:4,7:8)], format="html", digits=3) %>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%")
+
+out.dat[32:42, 3] <- fit[, 3]
+
+```
+
+### Preliminary Reliability
+
+```{r item-analysis-int-rel}
+# preliminary reliability
+psych::alpha(dat[, paste0("Q6_",1:11)])
+
+```
+
+
+## Initial Engagement Items
+
+### Item Analysis
+
+```{r item-analysis-en-item}
+
+fit <- psychometric::item.exam(dat[, paste0("Q7_",1:15)])
+
+kable(fit[,c(1:4,7:8)], format="html", digits=3) %>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%")
+
+out.dat[43:57, 3] <- fit[, 3]
+
+```
+
+### Preliminary Reliability
+
+```{r item-analysis-eln-rel}
+# preliminary reliability
+psych::alpha(dat[, paste0("Q7_",1:15)])
+
+```
+
+
+# EFA
+
+## Correlations
+
+First, we investigated the raw correlations among the variables.
+
+```{r cor}
+
+# Pearson correlation matrix
+corr.ppm <- cor(dat)
+kable(corr.ppm,digits=3,format = "html")%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="500px")
+
+# Polychoric Correlation
+corr.pc <- polychoric(dat)
+kable(corr.pc$rho,digits=3,format = "html")%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="500px")
+
+# Difference between correlation matrices
+kable(corr.pc$rho-corr.ppm,digits=3,format = "html")%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%", height="500px")
+# What % of PC correlations are higher than PPM?
+a <- sum(round(corr.pc$rho - corr.ppm, 3) > 0)/2
+b <- sum(round(corr.pc$rho - corr.ppm, 3) < 0)/2
+prop.diff <- a/(a+b)
+prop.diff
+# Is this difference significantly different than .5?
+X <- table(c(rep(0,a),rep(1,b)))
+prop.test(x=X, alternative = 'greater')
+
+```
+
+
+## Eigenvalues and Scree Plot
+
+```{r eigen}
+
+evalues<-eigen(corr.pc$rho)$values
+evalues
+plotnScree(nScree(evalues, model="factors"), main="Scree Plot & Parallel Analysis")
+
+
+psych::fa.parallel(dat,main="Parallel Analysis",
+                   fm = "pa",cor = "cov")
+
+
+psych::fa.parallel(corr.pc$rho,main="Parallel Analysis",
+                   n.obs = nrow(mydata), fm = "pa", cor = "cov")
+
+
+
+```
+
+Note that the warning for the "estimated weights for the factor scores..." is not particularly impacting because we do not intend to obtain factor scores.
+
+## Factor Extraction
+
+### Two factor extraction
+
+```{r extract2}
+
+fit <- psych::fa(r = corr.pc$rho, nfactors = 2, rotate = "Promax", fm = "pa")
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+fit <- psych::fa(r = cov.dat, nfactors = 2, rotate = "Promax", fm = "pa", covar = T)
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+```
+
+### Three factor extraction
+
+```{r extract3}
+
+fit <- psych::fa(r = corr.pc$rho, nfactors = 3, rotate = "Promax", fm = "pa")
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+fit <- psych::fa(r = cov.dat, nfactors = 3, rotate = "Promax", fm = "pa", covar = T)
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+```
+
+### Four factor extraction
+
+```{r extract4}
+
+fit <- psych::fa(r = corr.pc$rho, nfactors = 4, rotate = "Promax", fm = "pa")
+fit
+print(fit$loadings, cutoff=0.3)
+
+fit <- psych::fa(r = cov.dat, nfactors = 4, rotate = "Promax", fm = "pa", covar = T)
+fit
+print(fit$loadings, cutoff=0.3)
+
+# rerun the above using the correlation matrix (pearson) to more easily get the standardized factor loadings.
+fit <- psych::fa(r = corr.ppm, nfactors = 4, rotate = "Promax", fm = "pa", covar = T)
+out.dat[,c(5:8)] <- fit$loadings
+out.dat[,9] <- fit$communality
+out.dat[,10] <- fit$uniquenesses
+
+write.csv(out.dat, file="data/efa_results_2021_01_06.csv")
+```
+
+### Five factor extraction
+
+```{r extract5, warning=F}
+
+fit <- psych::fa(r = corr.pc$rho, nfactors = 5, rotate = "Promax", fm = "pa")
+fit
+print(fit$loadings, cutoff=0.3)
+
+fit <- psych::fa(r = cov.dat, nfactors = 5, rotate = "Promax", fm = "pa", covar = T)
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+```
+
+
+### Six factor extraction
+
+```{r extract6, warning=F}
+
+fit <- psych::fa(r = corr.pc$rho, nfactors = 6,
+          rotate = "Promax", fm = "pa")
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+fit <- psych::fa(r = cov.dat, nfactors = 6, rotate = "Promax", fm = "pa", covar = T)
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+```
+
+### Seven factor extraction
+
+```{r extract7}
+
+fit <- psych::fa(r = corr.pc$rho, nfactors = 7, rotate = "Promax", fm = "pa")
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+fit <- psych::fa(r = cov.dat, nfactors = 7, rotate = "Promax", fm = "pa", covar = T)
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+```
+
+### Eight factor extraction
+
+```{r extract8}
+
+fit <- psych::fa(r = corr.pc$rho, nfactors = 8, rotate = "Promax", fm = "pa")
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+fit <- psych::fa(r = cov.dat, nfactors = 8, rotate = "Promax", fm = "pa", covar = T)
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+```
+
+### Nine factor extraction
+
+```{r extract9}
+
+fit <- psych::fa(r = corr.pc$rho, nfactors = 9, rotate = "Promax", fm = "pa")
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+fit <- psych::fa(r = cov.dat, nfactors = 9, rotate = "Promax", fm = "pa", covar = T)
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+```
+
+
+### Ten factor extraction
+
+```{r extract10}
+
+fit <- psych::fa(r = corr.pc$rho, nfactors = 10, rotate = "Promax", fm = "pa")
+fit
+print(fit$loadings, cutoff=0.3)
+
+
+fit <- psych::fa(r = cov.dat, nfactors = 10, rotate = "Promax", fm = "pa", covar = T)
+fit
+print(fit$loadings, cutoff=0.3)
+
+```
+
+# Selected Set of Items
+
+We selected the following items based on these results:
+
+| Effective Learning (Q4) | Student Centered (Q5)	| Interactive (Q6) | Engagement (Q7) |
+|-------------------------|-----------------------|------------------|-----------------|
+| Q4-1 | Q5-1 | Q6-1 | Q7-2 |
+| Q4-2 | Q5-2 | Q6-2 | Q7-4 |
+| Q4-3 | Q5-3 | Q6-3 | Q7-5 |
+| Q4-4 | Q5-4 | Q6-4 | Q7-7 |
+| Q4-5 | Q5-5 | Q6-5 | Q7-8 |
+| Q4-8 | Q5-6 | Q6-6 | Q7-12 |
+| Q4-9 | Q5-8 | Q6-7 | Q7-13 |
+| Q4-10 | Q5-12 |  Q6-8 | Q7-14 |
+| Q4-11 | | Q6-12 | |
+| Q4-15 | | | |
+| Q4-16 | | | |
+| Q4-17 | | | |
+| Q4-18 | | | |
+| Q4-19 | | | |
+
+For the item stems, please see the document [here](static/pilot-data-item-review.xlsx).
+
+
+## Post EFA Item & Reliability Analysis
+
+### Effective Learning Items
+
+```{r post-item-analysis-el}
+
+# item analysis
+fit <- psychometric::item.exam(dat[, paste0("Q4_",c(1:5,8:11, 15:19))])
+
+kable(fit[,c(1:4,7:8)], format="html", digits=3) %>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%")
+
+# post reliability
+psych::alpha(dat[, paste0("Q4_",c(1:5,8:11, 15:19))])
+
+```
+
+### Initial Student Centered Items
+
+```{r post-item-analysis-sc-item}
+
+# item analysis
+fit <- psychometric::item.exam(dat[, paste0("Q5_",c(1:6, 8, 12))])
+
+kable(fit[,c(1:4,7:8)], format="html", digits=3) %>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%")
+
+# post reliability
+psych::alpha(dat[, paste0("Q5_",c(1:6, 8, 12))])
+
+```
+
+
+### Interactive Items
+
+```{r post-item-analysis-int-item}
+
+# item analysis
+fit <- psychometric::item.exam(dat[, paste0("Q6_",c(1:8, 11))])
+
+kable(fit[,c(1:4,7:8)], format="html", digits=3) %>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%")
+
+# post reliability
+psych::alpha(dat[, paste0("Q6_",c(1:8, 11))])
+
+```
+
+
+### Engagement Items
+
+```{r post-item-analysis-en-item}
+
+# item analysis
+fit <- psychometric::item.exam(dat[, paste0("Q7_",c(2, 4:5, 7:8, 12:14))])
+
+kable(fit[,c(1:4,7:8)], format="html", digits=3) %>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%")
+
+# post reliability
+psych::alpha(dat[, paste0("Q7_",c(2, 4:5, 7:8, 12:14))])
+
+```
+

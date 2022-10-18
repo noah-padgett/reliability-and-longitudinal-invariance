@@ -1,0 +1,28 @@
+set-up	set.seed	source
+read-in	$<-	%>%	::	==	all_of	c	filter	full_join	group_by	HSP ID	keep_case	mutate	n	paste0	person_response_total	pivot_wider	wave
+unnamed-chunk-1	
+model	
+invar-test-config	%>%	..density..	@	~	aes	analysis.dat	as.character	base_model	c	cat	cfa	data.frame	element_blank	element_text	everything	facet_wrap	fit	fit.obs	geom_density	geom_histogram	geom_vline	ggplot	labs	left_join	measEq.syntax	permuteMeasEq	pivot_longer	scale_linetype_manual	summary	T	theme	theme_bw
+inv-config-wide-fit	cfa	configural.model.wide	summary	T	wide.analysis.data
+config-residuals	$	%>%	::	[<-	~	==	>=	abs	aes	annotate	arrange	as.numeric	colnames	colnames<-	data.frame	desc	facet_wrap	filter	fit.config.wide	for	geom_density	geom_vline	ggplot	if	ifelse	kable	kable_styling	labs	matrix	mutate	next	nrow	paste0	recode	resid	rownames	scroll_box	substr	T	theme_bw	V1_Domain	V2_Domain
+config-mod indices	fit.config.wide	modindices	T
+invar-test-threshold-longitudinal	cfa	fit.config.wide	lavTestLRT	summary	T	wide.analysis.data
+visualize-thresholds-config	%>%	::	==	1	2	aes	annotate	c	Domain	est	exp	filter	fit.config.wide	geom_hline	geom_point	ggplot	group	labs	lhs	mutate	nchar	op	pivot_wider	recode	rhs	scale_color_manual	scale_shape_manual	substr	theme	theme_classic	threshold_diff
+thresh-residuals	%>%	::	~	==	abs	aes	annotate	arrange	desc	facet_wrap	filter	fit.threshold.wide	geom_density	geom_vline	ggplot	kable	kable_styling	labs	mutate	recode	resid	scroll_box	T	theme_bw	transform_resid_to_dataframe	V1_Domain	V2_Domain
+thresh-mod indices	fit.threshold.wide	modindices	T
+invar-test-thresholds	analysis.dat	as.character	c	cfa	fit.config	lavTestLRT	measEq.syntax	mod.config	summary	T
+invar-test-loadings-longitudinal	cfa	fit.threshold.wide	lavTestLRT	summary	T	wide.analysis.data
+visualize-loadings-threshold	%>%	::	==	1	2	aes	arrange	c	desc	Domain	est	filter	fit.threshold.wide	geom_hline	geom_point	ggplot	group	item	kable	kable_styling	labs	lhs	loading_diff	mutate	nchar	op	pivot_wider	recode	rhs	scroll_box	substr	T	theme_classic	Wave 1	Wave 2
+invar-test-loadings	analysis.dat	as.character	c	cfa	fit.threshold	lavTestLRT	measEq.syntax	mod.config	summary	T
+loading-residuals	%>%	::	~	==	abs	aes	annotate	arrange	desc	facet_wrap	filter	fit.loading.wide	geom_density	geom_vline	ggplot	kable	kable_styling	labs	mutate	recode	resid	scroll_box	T	theme_bw	transform_resid_to_dataframe	V1_Domain	V2_Domain
+loading-mod indices	fit.loading.wide	modindices	T
+invar-test-lrintercept-longitudinal	cfa	fit.loading.wide	lavTestLRT	summary	T	wide.analysis.data
+visualize-lrintercept-differences	!=	$	%>%	::	[<-	==	aes	arrange	c	desc	Domain	est	exp	filter	fit.loading.wide	geom_hline	geom_point	ggplot	item	kable	kable_styling	labs	lhs	mutate	nchar	numeric	op	recode	scroll_box	substr	sum	T	theme_classic
+test-invar-lrintercepts	analysis.dat	as.character	c	cfa	fit.loading	lavTestLRT	measEq.syntax	mod.config	summary	T
+lrintercept-residuals	%>%	::	~	==	abs	aes	annotate	arrange	desc	facet_wrap	filter	fit.lrintercept.wide	geom_density	geom_vline	ggplot	kable	kable_styling	labs	mutate	recode	resid	scroll_box	T	theme_bw	transform_resid_to_dataframe	V1_Domain	V2_Domain
+lrintercept-mod indices	fit.lrintercept.wide	modindices	T
+invar-test-lrvariance-longitudinal	cfa	fit.lrintercept.wide	lavTestLRT	summary	T	wide.analysis.data
+invar-test-lrvariances	analysis.dat	as.character	c	cfa	fit.lrintercept	lavTestLRT	measEq.syntax	mod.config	summary	T
+lrvariance-residuals	%>%	::	~	==	abs	aes	annotate	arrange	desc	facet_wrap	filter	fit.lrvariance.wide	geom_density	geom_vline	ggplot	kable	kable_styling	labs	mutate	recode	resid	scroll_box	T	theme_bw	transform_resid_to_dataframe	V1_Domain	V2_Domain
+lrvariance-mod indices	fit.lrvariance.wide	modindices	T
+unnamed-chunk-2	compareFit	fit.config	fit.config.wide	fit.loading	fit.loading.wide	fit.lrintercept	fit.lrintercept.wide	fit.lrvariance	fit.lrvariance.wide	fit.threshold	fit.threshold.wide	list	summary

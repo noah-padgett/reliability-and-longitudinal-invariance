@@ -9,29 +9,14 @@ website:
         text: Home
       - about.qmd
       - license.qmd
-  sidebar:
-    style: "docked"
-    search: true
-    contents:
-      - section: "General"
-        contents:
-          - index.qmd
-      - section: "Technical Details"
-        contents:
-          - reliability.qmd
-          - test-retest-reliability.qmd
-          - longitudinal-invariance.qmd
-      - section: "Demonstration"
-        contents:
-          - reliability.qmd
-          - test-retest-reliability.qmd
-          - longitudinal-invariance.qmd
+      - reliability.qmd
+      - test-retest-reliability.qmd
+      - longitudinal-invariance.qmd
           
 format:
   html:
     theme: cosmo
     css: styles.css
-    toc: true
 
-editor: visual
+editor: source
 

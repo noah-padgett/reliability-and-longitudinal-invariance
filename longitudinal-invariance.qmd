@@ -3,3 +3,1714 @@ title: "Longitudinal Invariance"
 ---
 
 On this page, longitudinal invariance is discussed in more detail.
+
+```{r markdown-setup}
+#|cache=T
+#|autodept=T
+#|cache.comments=T
+
+knitr::opts_chunk$set(autodep = TRUE, cache=TRUE, out.width = 100)
+
+```
+
+```{r set-up,message=FALSE, warning=FALSE, error=FALSE}
+# load packages
+source("code/load_packages.R")
+source("code/load_utility_functions.R")
+set.seed(12345) # for replicability
+
+```
+
+# Data
+
+```{r read-in}
+
+datw1 <- readr::read_csv("data/UBC_Data_Wave1_Clean.csv");
+datw1$wave = 1
+datw2 <- readr::read_csv("data/UBC_Data_Wave2_Clean.csv")
+datw2$wave = 2
+mydata <- full_join(datw1, datw2)
+ITEMS <- c(paste0("CG",1:3), paste0("CI",1:3), paste0("SS",1:3), paste0("SO",1:3), paste0("DM",1:3), paste0("DP",1:3), paste0("DG",1:3))
+
+analysis.dat <- mydata %>%
+  filter(keep_case==1) %>%
+  dplyr::select(all_of(c("HSP ID","wave", "Gender","Age","Year_School",ITEMS)))%>%
+  group_by(`HSP ID`)%>%
+  mutate(
+    person_response_total = n()
+  ) %>%
+  filter(person_response_total==2)%>%
+  dplyr::group_by(`HSP ID`, wave) %>%
+  dplyr::mutate(n = dplyr::n())%>%# make sure there's only 1 per person
+  filter(n==1)
+  
+
+# convert to "wide" data
+wide.analysis.data <- analysis.dat %>%
+  pivot_wider(
+    id_cols = "HSP ID",
+    names_from = "wave",
+    values_from = all_of(ITEMS)
+  )
+```
+
+## Data Summary
+
+```{r}
+# data summary stats
+
+```
+
+# Measurement Model
+
+The basic measurement model is shown below (in lavaan syntax) and in the path diagram.
+
+```{r model}
+
+base_model <- "
+C =~ NA*CG1 + CG2 + CG3 + CI1 + CI2 + CI3
+S =~ NA*SS1 + SS2 + SS3 + SO1 + SO2 + SO3
+D =~ NA*DM1 + DM2 + DM3 + DP1 + DP2 + DP3 + DG1 + DG2 + DG3
+
+C ~~ S + D
+S ~~ D
+C ~~ 1*C
+S ~~ 1*S
+D ~~ 1*D
+"
+
+# longitudinal equivalent
+configural.model.wide <- "
+C1 =~ NA*CG1_1 + CG2_1 + CG3_1 + CI1_1 + CI2_1 + CI3_1
+S1 =~ NA*SS1_1 + SS2_1 + SS3_1 + SO1_1 + SO2_1 + SO3_1
+D1 =~ NA*DM1_1 + DM2_1 + DM3_1 + DP1_1 + DP2_1 + DP3_1 + DG1_1 + DG2_1 + DG3_1
+
+C1 ~~ S1 + D1
+S1 ~~ D1 
+C1 ~~ 1*C1
+S1 ~~ 1*S1
+D1 ~~ 1*D1
+
+C2 =~ NA*CG1_2 + CG2_2 + CG3_2 + CI1_2 + CI2_2 + CI3_2
+S2 =~ NA*SS1_2 + SS2_2 + SS3_2 + SO1_2 + SO2_2 + SO3_2
+D2 =~ NA*DM1_2 + DM2_2 + DM3_2 + DP1_2 + DP2_2 + DP3_2 + DG1_2 + DG2_2 + DG3_2
+
+C2 ~~ S2 + D2
+S2 ~~ D2
+C2 ~~ 1*C2
+S2 ~~ 1*S2
+D2 ~~ 1*D2
+
+# cross wave factor covariances
+C1 ~~ C2 + S2 + D2
+S1 ~~ C2 + S2 + D2
+D1 ~~ C2 + S2 + D2
+# cross wave item residual covariances
+CG1_1 ~~ CG1_2 
+CG2_1 ~~ CG2_2 
+CG3_1 ~~ CG3_2 
+CI1_1 ~~ CI1_2
+CI2_1 ~~ CI2_2 
+CI3_1 ~~ CI3_2
+SS1_1 ~~ SS1_2
+SS2_1 ~~ SS2_2 
+SS3_1 ~~ SS3_2
+SO1_1 ~~ SO1_2 
+SO2_1 ~~ SO2_2 
+SO3_1 ~~ SO3_2 
+DM1_1 ~~ DM1_2 
+DM2_1 ~~ DM2_2 
+DM3_1 ~~ DM3_2 
+DP1_1 ~~ DP1_2 
+DP2_1 ~~ DP2_2 
+DP3_1 ~~ DP3_2 
+DG1_1 ~~ DG1_2 
+DG2_1 ~~ DG2_2 
+DG3_1 ~~ DG3_2
+"
+```
+
+## Configural Invariance
+
+```{r invar-test-config}
+
+nPerm<-100 # for testing - for full analysis use 1000/10000
+
+# robust not available for categorical model
+myAFIs <- c(
+  "chisq","chisq.scaled",
+  "cfi","cfi.scaled",
+  "rmsea", "rmsea.scaled",
+  "srmr"
+)
+# obtain multigroup syntax
+syntax.config <- measEq.syntax(
+    configural.model = base_model,
+    data = analysis.dat,
+    ordered=T,
+    parameterization = "delta", # start with delta-parameterization
+    ID.cat = "Wu.Estabrook.2016",
+    ID.fac = "std.lv",
+    group.equal = "configural",
+    group = "wave"
+  )
+  mod.config <- as.character(syntax.config)
+  cat(mod.config)
+
+fit.config <- cfa(mod.config, data=analysis.dat, group = "wave")
+summary(fit.config, standardized=T, fit.measures=T)
+# note , the permuteMeasEq takes a LONG time to run,
+# recommend to go get coffee
+out.config <- permuteMeasEq(
+  nPermute = nPerm, con = fit.config,
+  AFIs = myAFIs, showProgress = T)
+summary(out.config)
+
+# the code below takes the output from the permutation test and creates a concise plot from which to visualize the results.
+perm.dat <- out.config@AFI.dist
+obs.fit <- data.frame(fit.obs=out.config@AFI.obs, index=myAFIs)
+perm.dat2 <- perm.dat %>%
+  pivot_longer(
+    cols=everything(),
+    names_to = "index",
+    values_to = "fit"
+  ) %>%
+  left_join(obs.fit)
+
+ggplot(perm.dat2, aes(x=fit))+
+  geom_histogram(aes(y=..density..), position="identity", fill="white", color="black")+
+  geom_density(color="grey10")+
+  geom_vline(aes(xintercept=fit.obs, linetype="Observed Fit"), color="red")+
+  facet_wrap(.~index, scales="free")+
+  scale_linetype_manual(values=c("Observed Fit"="dashed"), name=NULL)+
+  labs(x=NULL, title="Permutation Distributions")+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = c(0.9, 0.1),
+    axis.text = element_text(size=5)
+  )
+
+```
+
+The results are promising, and give some evidence that the factor structure is likely invariant across waves. The distributions for the scaled-CFI and RMSEA are troublesome, pointing to potential variance in the structure due to the high value of the observed fit index relative to the permutation distribution. I would like the distributions too all similar to the CFI distribution where the observed fit value is nearly in the center of permutation distribution.
+
+Next, the model above is re-estimated using the "wide" format approach that incorporate the lag covariance between same-item residuals.
+
+```{r inv-config-wide-fit}
+fit.config.wide <- cfa(
+  model=configural.model.wide, 
+  data = wide.analysis.data,
+  ordered = T
+) 
+summary(fit.config.wide, standardized=T, fit.measures=T)
+```
+
+The estimated parameters are similar between the two specification. We will focus on this latter model specification, but estimate the former (because it is very easy to get) to see if any major differences appear in our conclusions about invariance.
+
+Residuals $$Cor(Obsersed)-Cor(Model\ Implied)$$
+
+```{r config-residuals}
+
+resid.config.out <- lavaan::resid(fit.config.wide, type="cor")
+transform_resid_to_dataframe <- function(x){
+  xcov <- x$cov
+  nc <- nr <- nrow(xcov)
+  out <- data.frame(matrix(0, nrow=nc*(nr-1)/2,ncol=9))
+  colnames(out) <- c("Covariance", "Same_Wave", "V1_Wave", "V2_Wave", "V1_Domain", "V2_Domain","V1_Item", "V2_Item", "resid")
+  i <- 1
+  for(c in 1:nc){
+    for(r in 1:nr){
+      if(c>=r){
+        next
+      } else {
+        out[i,1] <- paste0("Cov(",colnames(xcov)[c],", ",rownames(xcov)[r],")")
+        out[i,2] <- ifelse(substr(colnames(xcov)[c],5,6) == substr(rownames(xcov)[r],5,6),"Within Wave", "Between Wave")
+        out[i,3] <- as.numeric(substr(colnames(xcov)[c],5,6))
+        out[i,4] <- as.numeric(substr(rownames(xcov)[r],5,6))
+        out[i,5] <- substr(colnames(xcov)[c],1,1)
+        out[i,6] <- substr(rownames(xcov)[r],1,1)
+        out[i,7] <- substr(colnames(xcov)[c],1,3)
+        out[i,8] <- substr(rownames(xcov)[r],1,3)
+        out[i,9] <- xcov[r,c]
+        i <- i + 1
+      }
+    }
+  }
+  out
+}
+
+resid.config <- transform_resid_to_dataframe(resid.config.out) %>%
+  mutate(
+    V1_Domain = recode(V1_Domain, `C`="Coherence",`S`="Significance",`D`="Direction"),
+    V2_Domain = recode(V2_Domain, `C`="Coherence",`S`="Significance",`D`="Direction")
+  )
+
+resid.config %>%
+  arrange(desc(abs(resid)))%>%
+  kable(format="html", digits=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%",height="400px")
+
+resid.config %>%
+  filter(V1_Domain==V2_Domain)%>%
+  ggplot(aes(x=resid,color=V1_Domain, fill=V1_Domain))+
+    geom_density(alpha=0.5, adjust=2)+
+    geom_vline(xintercept = 0, linetype='dashed')+
+    facet_wrap(.~Same_Wave)+
+    labs(x="Residual of correlations (Observed - Model Implied)")+
+    annotate("text",x=-0.15,y=9, label="Over estimate")+
+    annotate("text",x=0.15,y=9, label="Under estimate")+
+    theme_bw()
+
+```
+
+Mod indices
+
+```{r config-mod indices}
+modindices(fit.config.wide,sort. = T, maximum.number = 20)
+
+```
+
+## Testing Equality of Thresholds
+
+The test of structural/configural invariance resulted in evidence of the tenability of structural similarity across ways within the same people. Next, the thresholds are examined for potential variance across waves. This is done in two ways. First, using the longitudinal model with the correlated residuals. Second, treating the waves are independent (i.e., multigroup factor analysis).
+
+When testing the equivalence of the threshold, the tricky part is then freeing the estimation of the latent response scales and intercepts in wave 2. In wave 1, the latent response scales and intercepts are fixed to 1 and 0, respectively, for identification. At wave 2, the same item latent response scales and intercepts are estimates *relative* to their wave 1 counterparts. There is no easy way (that I know of) to write this full model out for a longitudinal model in wide format as the items are entered in within each individual (i.e., no "group" syntax) that makes the syntax more streamlined. Therefore, the model must be written out completely. Well, you can shorten the code, but I have written the full model out so that I can make sure the model is specified correctly and is easy to share how intense this can be.
+
+### Longitudinal Model
+
+```{r invar-test-threshold-longitudinal}
+
+threshold.model.wide <- "
+## ================================================= ##
+## Wave 1
+
+# Factor Loadings
+C1 =~ NA*CG1_1 + CG2_1 + CG3_1 + CI1_1 + CI2_1 + CI3_1
+S1 =~ NA*SS1_1 + SS2_1 + SS3_1 + SO1_1 + SO2_1 + SO3_1
+D1 =~ NA*DM1_1 + DM2_1 + DM3_1 + DP1_1 + DP2_1 + DP3_1 + DG1_1 + DG2_1 + DG3_1
+
+# Factor covariances
+C1 ~~ S1 + D1
+S1 ~~ D1 
+
+# Factor variances
+C1 ~~ 1*C1
+S1 ~~ 1*S1
+D1 ~~ 1*D1
+
+# Factor means/intercepts
+C1 ~ 0*1
+S1 ~ 0*1
+D1 ~ 0*1
+
+# Thresholds
+CG1_1 | CG1.thr1*t1 + CG1.thr2*t2 + CG1.thr3*t3 + CG1.thr4*t4 + CG1.thr5*t5 + CG1.thr6*t6
+CG2_1 | CG2.thr1*t1 + CG2.thr2*t2 + CG2.thr3*t3 + CG2.thr4*t4 + CG2.thr5*t5 + CG2.thr6*t6
+CG3_1 | CG3.thr1*t1 + CG3.thr2*t2 + CG3.thr3*t3 + CG3.thr4*t4 + CG3.thr5*t5 + CG3.thr6*t6
+
+CI1_1 | CI1.thr1*t1 + CI1.thr2*t2 + CI1.thr3*t3 + CI1.thr4*t4 + CI1.thr5*t5 + CI1.thr6*t6
+CI2_1 | CI2.thr1*t1 + CI2.thr2*t2 + CI2.thr3*t3 + CI2.thr4*t4 + CI2.thr5*t5 + CI2.thr6*t6
+CI3_1 | CI3.thr1*t1 + CI3.thr2*t2 + CI3.thr3*t3 + CI3.thr4*t4 + CI3.thr5*t5 + CI3.thr6*t6
+
+SS1_1 | SS1.thr1*t1 + SS1.thr2*t2 + SS1.thr3*t3 + SS1.thr4*t4 + SS1.thr5*t5 + SS1.thr6*t6
+SS2_1 | SS2.thr1*t1 + SS2.thr2*t2 + SS2.thr3*t3 + SS2.thr4*t4 + SS2.thr5*t5 + SS2.thr6*t6
+SS3_1 | SS3.thr1*t1 + SS3.thr2*t2 + SS3.thr3*t3 + SS3.thr4*t4 + SS3.thr5*t5 + SS3.thr6*t6
+
+SO1_1 | SO1.thr1*t1 + SO1.thr2*t2 + SO1.thr3*t3 + SO1.thr4*t4 + SO1.thr5*t5 + SO1.thr6*t6
+SO2_1 | SO2.thr1*t1 + SO2.thr2*t2 + SO2.thr3*t3 + SO2.thr4*t4 + SO2.thr5*t5 + SO2.thr6*t6
+SO3_1 | SO3.thr1*t1 + SO3.thr2*t2 + SO3.thr3*t3 + SO3.thr4*t4 + SO3.thr5*t5 + SO3.thr6*t6
+
+DM1_1 | DM1.thr1*t1 + DM1.thr2*t2 + DM1.thr3*t3 + DM1.thr4*t4 + DM1.thr5*t5 + DM1.thr6*t6
+DM2_1 | DM2.thr1*t1 + DM2.thr2*t2 + DM2.thr3*t3 + DM2.thr4*t4 + DM2.thr5*t5 + DM2.thr6*t6
+DM3_1 | DM3.thr1*t1 + DM3.thr2*t2 + DM3.thr3*t3 + DM3.thr4*t4 + DM3.thr5*t5 + DM3.thr6*t6
+
+DP1_1 | DP1.thr1*t1 + DP1.thr2*t2 + DP1.thr3*t3 + DP1.thr4*t4 + DP1.thr5*t5 + DP1.thr6*t6
+DP2_1 | DP2.thr1*t1 + DP2.thr2*t2 + DP2.thr3*t3 + DP2.thr4*t4 + DP2.thr5*t5 + DP2.thr6*t6
+DP3_1 | DP3.thr1*t1 + DP3.thr2*t2 + DP3.thr3*t3 + DP3.thr4*t4 + DP3.thr5*t5 + DP3.thr6*t6
+
+DG1_1 | DG1.thr1*t1 + DG1.thr2*t2 + DG1.thr3*t3 + DG1.thr4*t4 + DG1.thr5*t5 + DG1.thr6*t6
+DG2_1 | DG2.thr1*t1 + DG2.thr2*t2 + DG2.thr3*t3 + DG2.thr4*t4 + DG2.thr5*t5 + DG2.thr6*t6
+DG3_1 | DG3.thr1*t1 + DG3.thr2*t2 + DG3.thr3*t3 + DG3.thr4*t4 + DG3.thr5*t5 + DG3.thr6*t6
+
+# latent response intercepts - fixed to 0
+CG1_1 ~  0*1
+CG2_1 ~  0*1
+CG3_1 ~  0*1
+CI1_1 ~  0*1
+CI2_1 ~  0*1
+CI3_1 ~  0*1
+SS1_1 ~  0*1
+SS2_1 ~  0*1
+SS3_1 ~  0*1
+SO1_1 ~  0*1
+SO2_1 ~  0*1
+SO3_1 ~  0*1
+DM1_1 ~  0*1
+DM2_1 ~  0*1
+DM3_1 ~  0*1
+DP1_1 ~  0*1
+DP2_1 ~  0*1
+DP3_1 ~  0*1
+DG1_1 ~  0*1
+DG2_1 ~  0*1
+DG3_1 ~  0*1
+
+# latent response scales - fixed to 1
+CG1_1 ~*~ 1*CG1_1
+CG2_1 ~*~ 1*CG2_1
+CG3_1 ~*~ 1*CG3_1
+CI1_1 ~*~ 1*CI1_1
+CI2_1 ~*~ 1*CI2_1
+CI3_1 ~*~ 1*CI3_1
+SS1_1 ~*~ 1*SS1_1
+SS2_1 ~*~ 1*SS2_1
+SS3_1 ~*~ 1*SS3_1
+SO1_1 ~*~ 1*SO1_1
+SO2_1 ~*~ 1*SO2_1
+SO3_1 ~*~ 1*SO3_1
+DM1_1 ~*~ 1*DM1_1
+DM2_1 ~*~ 1*DM2_1
+DM3_1 ~*~ 1*DM3_1
+DP1_1 ~*~ 1*DP1_1
+DP2_1 ~*~ 1*DP2_1
+DP3_1 ~*~ 1*DP3_1
+DG1_1 ~*~ 1*DG1_1
+DG2_1 ~*~ 1*DG2_1
+DG3_1 ~*~ 1*DG3_1
+
+## ================================================= ##
+##  Wave 2
+
+# Factor Loadings
+C2 =~ NA*CG1_2 + CG2_2 + CG3_2 + CI1_2 + CI2_2 + CI3_2
+S2 =~ NA*SS1_2 + SS2_2 + SS3_2 + SO1_2 + SO2_2 + SO3_2
+D2 =~ NA*DM1_2 + DM2_2 + DM3_2 + DP1_2 + DP2_2 + DP3_2 + DG1_2 + DG2_2 + DG3_2
+
+# Factor covariances
+C2 ~~ S2 + D2
+S2 ~~ D2
+
+# Factor Variances
+C2 ~~ 1*C2
+S2 ~~ 1*S2
+D2 ~~ 1*D2
+
+# Factor means/intercepts
+C2 ~ 0*1
+S2 ~ 0*1
+D2 ~ 0*1
+
+# Thresholds
+CG1_2 | CG1.thr1*t1 + CG1.thr2*t2 + CG1.thr3*t3 + CG1.thr4*t4 + CG1.thr5*t5 + CG1.thr6*t6
+CG2_2 | CG2.thr1*t1 + CG2.thr2*t2 + CG2.thr3*t3 + CG2.thr4*t4 + CG2.thr5*t5 + CG2.thr6*t6
+CG3_2 | CG3.thr1*t1 + CG3.thr2*t2 + CG3.thr3*t3 + CG3.thr4*t4 + CG3.thr5*t5 + CG3.thr6*t6
+
+CI1_2 | CI1.thr1*t1 + CI1.thr2*t2 + CI1.thr3*t3 + CI1.thr4*t4 + CI1.thr5*t5 + CI1.thr6*t6
+CI2_2 | CI2.thr1*t1 + CI2.thr2*t2 + CI2.thr3*t3 + CI2.thr4*t4 + CI2.thr5*t5 + CI2.thr6*t6
+CI3_2 | CI3.thr1*t1 + CI3.thr2*t2 + CI3.thr3*t3 + CI3.thr4*t4 + CI3.thr5*t5 + CI3.thr6*t6
+
+SS1_2 | SS1.thr1*t1 + SS1.thr2*t2 + SS1.thr3*t3 + SS1.thr4*t4 + SS1.thr5*t5 + SS1.thr6*t6
+SS2_2 | SS2.thr1*t1 + SS2.thr2*t2 + SS2.thr3*t3 + SS2.thr4*t4 + SS2.thr5*t5 + SS2.thr6*t6
+SS3_2 | SS3.thr1*t1 + SS3.thr2*t2 + SS3.thr3*t3 + SS3.thr4*t4 + SS3.thr5*t5 + SS3.thr6*t6
+
+SO1_2 | SO1.thr1*t1 + SO1.thr2*t2 + SO1.thr3*t3 + SO1.thr4*t4 + SO1.thr5*t5 + SO1.thr6*t6
+SO2_2 | SO2.thr1*t1 + SO2.thr2*t2 + SO2.thr3*t3 + SO2.thr4*t4 + SO2.thr5*t5 + SO2.thr6*t6
+SO3_2 | SO3.thr1*t1 + SO3.thr2*t2 + SO3.thr3*t3 + SO3.thr4*t4 + SO3.thr5*t5 + SO3.thr6*t6
+
+DM1_2 | DM1.thr1*t1 + DM1.thr2*t2 + DM1.thr3*t3 + DM1.thr4*t4 + DM1.thr5*t5 + DM1.thr6*t6
+DM2_2 | DM2.thr1*t1 + DM2.thr2*t2 + DM2.thr3*t3 + DM2.thr4*t4 + DM2.thr5*t5 + DM2.thr6*t6
+DM3_2 | DM3.thr1*t1 + DM3.thr2*t2 + DM3.thr3*t3 + DM3.thr4*t4 + DM3.thr5*t5 + DM3.thr6*t6
+
+DP1_2 | DP1.thr1*t1 + DP1.thr2*t2 + DP1.thr3*t3 + DP1.thr4*t4 + DP1.thr5*t5 + DP1.thr6*t6
+DP2_2 | DP2.thr1*t1 + DP2.thr2*t2 + DP2.thr3*t3 + DP2.thr4*t4 + DP2.thr5*t5 + DP2.thr6*t6
+DP3_2 | DP3.thr1*t1 + DP3.thr2*t2 + DP3.thr3*t3 + DP3.thr4*t4 + DP3.thr5*t5 + DP3.thr6*t6
+
+DG1_2 | DG1.thr1*t1 + DG1.thr2*t2 + DG1.thr3*t3 + DG1.thr4*t4 + DG1.thr5*t5 + DG1.thr6*t6
+DG2_2 | DG2.thr1*t1 + DG2.thr2*t2 + DG2.thr3*t3 + DG2.thr4*t4 + DG2.thr5*t5 + DG2.thr6*t6
+DG3_2 | DG3.thr1*t1 + DG3.thr2*t2 + DG3.thr3*t3 + DG3.thr4*t4 + DG3.thr5*t5 + DG3.thr6*t6
+
+# latent response intercepts - free - relative to wave 1
+CG1_2 ~  NA*1
+CG2_2 ~  NA*1
+CG3_2 ~  NA*1
+CI1_2 ~  NA*1
+CI2_2 ~  NA*1
+CI3_2 ~  NA*1
+SS1_2 ~  NA*1
+SS2_2 ~  NA*1
+SS3_2 ~  NA*1
+SO1_2 ~  NA*1
+SO2_2 ~  NA*1
+SO3_2 ~  NA*1
+DM1_2 ~  NA*1
+DM2_2 ~  NA*1
+DM3_2 ~  NA*1
+DP1_2 ~  NA*1
+DP2_2 ~  NA*1
+DP3_2 ~  NA*1
+DG1_2 ~  NA*1
+DG2_2 ~  NA*1
+DG3_2 ~  NA*1
+
+# latent response scales - free - relative to wave 1
+CG1_2 ~*~ NA*CG1_2
+CG2_2 ~*~ NA*CG2_2
+CG3_2 ~*~ NA*CG3_2
+CI1_2 ~*~ NA*CI1_2
+CI2_2 ~*~ NA*CI2_2
+CI3_2 ~*~ NA*CI3_2
+SS1_2 ~*~ NA*SS1_2
+SS2_2 ~*~ NA*SS2_2
+SS3_2 ~*~ NA*SS3_2
+SO1_2 ~*~ NA*SO1_2
+SO2_2 ~*~ NA*SO2_2
+SO3_2 ~*~ NA*SO3_2
+DM1_2 ~*~ NA*DM1_2
+DM2_2 ~*~ NA*DM2_2
+DM3_2 ~*~ NA*DM3_2
+DP1_2 ~*~ NA*DP1_2
+DP2_2 ~*~ NA*DP2_2
+DP3_2 ~*~ NA*DP3_2
+DG1_2 ~*~ NA*DG1_2
+DG2_2 ~*~ NA*DG2_2
+DG3_2 ~*~ NA*DG3_2
+
+## ================================================= ##
+# cross wave factor covariances 
+C1 ~~ C2 + S2 + D2
+S1 ~~ C2 + S2 + D2
+D1 ~~ C2 + S2 + D2
+# cross wave item residual covariances
+CG1_1 ~~ CG1_2 
+CG2_1 ~~ CG2_2 
+CG3_1 ~~ CG3_2 
+CI1_1 ~~ CI1_2
+CI2_1 ~~ CI2_2 
+CI3_1 ~~ CI3_2
+SS1_1 ~~ SS1_2
+SS2_1 ~~ SS2_2 
+SS3_1 ~~ SS3_2
+SO1_1 ~~ SO1_2 
+SO2_1 ~~ SO2_2 
+SO3_1 ~~ SO3_2 
+DM1_1 ~~ DM1_2 
+DM2_1 ~~ DM2_2 
+DM3_1 ~~ DM3_2 
+DP1_1 ~~ DP1_2 
+DP2_1 ~~ DP2_2 
+DP3_1 ~~ DP3_2 
+DG1_1 ~~ DG1_2 
+DG2_1 ~~ DG2_2 
+DG3_1 ~~ DG3_2
+"
+
+# fit model
+fit.threshold.wide <- cfa(
+  model=threshold.model.wide, 
+  data = wide.analysis.data,
+  ordered = T
+) 
+summary(fit.threshold.wide, standardized=T, fit.measures=T)
+
+## test equivalence of thresholds, given equivalence of configural model
+lavTestLRT(fit.config.wide, fit.threshold.wide, method = "satorra.bentler.2010")
+
+```
+
+When specifying the longitudinal covariances among items, the chi-square difference test gives evidence that the thresholds can be held invariant with approximately equal thresholds between waves. A way to **roughly** verify if is setting the thresholds equal is substantively reasonably is to look at the difference in thresholds between waves. The following plot visualizes the difference in thresholds across waves from the configural model. In this figure, I plotted each threshold highlighted by the domain that each threshold corresponds to. If all the differences (wave 2 - wave 1) are centered around zero, then we would have a rough approximation of the average equality. However, another use of the figure is to extract the most extreme difference. The most extreme difference can then be investigated further for potential substantive differences in the interpretation of the response probabilities of the difference categories.
+
+```{r visualize-thresholds-config}
+
+config.model.threshold.est <- lavaan::parTable(fit.config.wide) %>%
+  filter(op == "|") %>%
+  mutate(
+    group = substr(lhs,nchar(lhs),1000),
+    lhs = substr(lhs,1,nchar(lhs)-2)
+  )%>%
+  dplyr::select(lhs,rhs,group,est)%>%
+  pivot_wider(
+    id_cols=c("lhs","rhs"),
+    names_from = "group",
+    values_from = "est"
+  ) %>%
+  mutate(
+    threshold_diff = `2`-`1`,
+    Domain = recode(lhs, 
+      `CG1`="Coherence",`CG2`="Coherence",`CG3`="Coherence",
+      `CI1`="Coherence",`CI2`="Coherence",`CI3`="Coherence",
+      `SO1`="Significance",`SO2`="Significance",`SO3`="Significance",
+      `SS1`="Significance",`SS2`="Significance",`SS3`="Significance",
+      `DM1`="Direction",`DM2`="Direction",`DM3`="Direction",
+      `DG1`="Direction",`DG2`="Direction",`DG3`="Direction",
+      `DP1`="Direction",`DP2`="Direction",`DP3`="Direction")
+  )
+
+
+cols = c("Coherence"="grey25","Direction"="grey50", "Significance"="grey75")
+shp = c("Coherence"=18,"Direction"=16, "Significance"=15)
+ggplot(config.model.threshold.est, 
+       aes(x=rhs, y=threshold_diff,
+           color=Domain, shape=Domain))+
+  geom_point()+
+  geom_hline(yintercept = 0, linetype="dashed")+
+  scale_color_manual(values=cols)+
+  scale_shape_manual(values=shp)+
+  annotate("text", x=1.5,y=0.372,label="DG2")+
+  labs(x="Threshold", y="Difference in Thresholds (Wave 2 - Wave 1)")+
+  theme_classic()+
+  theme(
+    legend.position = c(0.8,0.8)
+  )
+
+
+# compute response probabilities for category one of item DG2
+tau1_1 <- -2.40
+tau1_2 <- -2.03
+
+# probability of "Strongly disagree" at wave 1
+exp(tau1_1)/(1 + exp(tau1_1))
+# probability of "Strongly disagree" at wave 2
+exp(tau1_2)/(1 + exp(tau1_2))
+
+```
+
+Item DG2 appears to be the most significance variance between waves. When the differences (Wave 2 - Wave 1) is positive, this indicates that the probability of endorsing a *lower* category increases. For instance, threshold one ($\tau_1$) of item DG2 increased by 0.37 from wave 1 ($\tau_1=-2.40$) to wave 2 ($\tau_1=-2.03$). Moving up on the logit scale implies that the probability of endorsing "Strongly disagree" for an individual of average "Direction" increased from 0.083 to 0.116 between wave 1 and wave 2. Said another way, a higher threshold results in a lower expected response or item mean. In this case, the change is pretty negligible increase in absolute terms. I think a less than 4% increase in relative probability for the average person is an acceptable level of difference to allows in the thresholds across waves, and we can safely say that invariance of thresholds reasonable from a substantive perspective of the average response probability.
+
+Investigate residuals
+
+```{r thresh-residuals}
+
+resid.thresh.out <- lavaan::resid(fit.threshold.wide, type="cor")
+
+resid.thresh <- transform_resid_to_dataframe(resid.thresh.out) %>%
+  mutate(
+    V1_Domain = recode(V1_Domain, `C`="Coherence",`S`="Significance",`D`="Direction"),
+    V2_Domain = recode(V2_Domain, `C`="Coherence",`S`="Significance",`D`="Direction")
+  )
+
+resid.thresh %>%
+  arrange(desc(abs(resid)))%>%
+  kable(format="html", digits=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%",height="400px")
+
+resid.thresh %>%
+  filter(V1_Domain==V2_Domain)%>%
+  ggplot(aes(x=resid,color=V1_Domain, fill=V1_Domain))+
+    geom_density(alpha=0.5, adjust=2)+
+    geom_vline(xintercept = 0, linetype='dashed')+
+    facet_wrap(.~Same_Wave)+
+    labs(x="Residual of correlations (Observed - Model Implied)")+
+    annotate("text",x=-0.15,y=9, label="Over estimate")+
+    annotate("text",x=0.15,y=9, label="Under estimate")+
+    theme_bw()
+
+```
+
+Mod indices
+
+```{r thresh-mod indices}
+modindices(fit.threshold.wide,sort. = T, maximum.number = 20)
+
+```
+
+### Multigroup model
+
+Let's check how the model looks without assuming the longitudinal error covariances. I believe this model will fit worse is more likely to indicate variance in the thresholds, but we have sufficient evidence from the above analysis to conclude the tenability of invariance.
+
+```{r invar-test-thresholds}
+  
+## threshol invariance
+syntax.thresh <- measEq.syntax(  
+  configural.model = mod.config,
+  data = analysis.dat,
+  ordered=T,
+  parameterization = "delta",
+  ID.cat = "Wu.Estabrook.2016",
+  ID.fac = "std.lv",
+  group = "wave",
+  group.equal = c("thresholds")
+) # end creating syntax
+summary(syntax.thresh)# summarize model features
+mod.thresh <- as.character(syntax.thresh) # save as text
+## fit model to data
+fit.threshold <- cfa(mod.thresh, data = analysis.dat, group = "wave")
+summary(fit.threshold, standardized=T, fit.measures=T)
+## test equivalence of thresholds, given equivalence of configural model
+lavTestLRT(fit.config, fit.threshold, method = "satorra.bentler.2010")
+
+```
+
+## Test Loading (Metric) Invariance
+
+Next, the loadings are tested for equality across waves. This is accomplished by first constraining the loadings to be equal across waves then freeing the factor variances at wave 2.
+
+```{r invar-test-loadings-longitudinal}
+
+loading.model.wide <- "
+## ================================================= ##
+## Wave 1
+
+# Factor Loadings
+# NOTE: you need to enter the first item of each factor twice in order to set the label (X.lambda.1) so that lavaan estimates the loading instead of fixing it to 1
+C1 =~ NA*CG1_1 + C.lambda.1*CG1_1 + C.lambda.2*CG2_1 + C.lambda.3*CG3_1 + C.lambda.4*CI1_1 + C.lambda.5*CI2_1 + C.lambda.6*CI3_1
+S1 =~ NA*SS1_1 + S.lambda.1*SS1_1 + S.lambda.2*SS2_1 + S.lambda.3*SS3_1 + S.lambda.4*SO1_1 + S.lambda.5*SO2_1 + S.lambda.6*SO3_1
+D1 =~ NA*DM1_1 + D.lambda.1*DM1_1 + D.lambda.2*DM2_1 + D.lambda.3*DM3_1 + D.lambda.4*DP1_1 + D.lambda.5*DP2_1 + D.lambda.6*DP3_1 + D.lambda.7*DG1_1 + D.lambda.8*DG2_1 + D.lambda.9*DG3_1
+
+# Factor covariances
+C1 ~~ S1 + D1
+S1 ~~ D1 
+
+# Factor variances
+C1 ~~ 1*C1
+S1 ~~ 1*S1
+D1 ~~ 1*D1
+
+# Factor means/intercepts
+C1 ~ 0*1
+S1 ~ 0*1
+D1 ~ 0*1
+
+# Thresholds
+CG1_1 | CG1.thr1*t1 + CG1.thr2*t2 + CG1.thr3*t3 + CG1.thr4*t4 + CG1.thr5*t5 + CG1.thr6*t6
+CG2_1 | CG2.thr1*t1 + CG2.thr2*t2 + CG2.thr3*t3 + CG2.thr4*t4 + CG2.thr5*t5 + CG2.thr6*t6
+CG3_1 | CG3.thr1*t1 + CG3.thr2*t2 + CG3.thr3*t3 + CG3.thr4*t4 + CG3.thr5*t5 + CG3.thr6*t6
+
+CI1_1 | CI1.thr1*t1 + CI1.thr2*t2 + CI1.thr3*t3 + CI1.thr4*t4 + CI1.thr5*t5 + CI1.thr6*t6
+CI2_1 | CI2.thr1*t1 + CI2.thr2*t2 + CI2.thr3*t3 + CI2.thr4*t4 + CI2.thr5*t5 + CI2.thr6*t6
+CI3_1 | CI3.thr1*t1 + CI3.thr2*t2 + CI3.thr3*t3 + CI3.thr4*t4 + CI3.thr5*t5 + CI3.thr6*t6
+
+SS1_1 | SS1.thr1*t1 + SS1.thr2*t2 + SS1.thr3*t3 + SS1.thr4*t4 + SS1.thr5*t5 + SS1.thr6*t6
+SS2_1 | SS2.thr1*t1 + SS2.thr2*t2 + SS2.thr3*t3 + SS2.thr4*t4 + SS2.thr5*t5 + SS2.thr6*t6
+SS3_1 | SS3.thr1*t1 + SS3.thr2*t2 + SS3.thr3*t3 + SS3.thr4*t4 + SS3.thr5*t5 + SS3.thr6*t6
+
+SO1_1 | SO1.thr1*t1 + SO1.thr2*t2 + SO1.thr3*t3 + SO1.thr4*t4 + SO1.thr5*t5 + SO1.thr6*t6
+SO2_1 | SO2.thr1*t1 + SO2.thr2*t2 + SO2.thr3*t3 + SO2.thr4*t4 + SO2.thr5*t5 + SO2.thr6*t6
+SO3_1 | SO3.thr1*t1 + SO3.thr2*t2 + SO3.thr3*t3 + SO3.thr4*t4 + SO3.thr5*t5 + SO3.thr6*t6
+
+DM1_1 | DM1.thr1*t1 + DM1.thr2*t2 + DM1.thr3*t3 + DM1.thr4*t4 + DM1.thr5*t5 + DM1.thr6*t6
+DM2_1 | DM2.thr1*t1 + DM2.thr2*t2 + DM2.thr3*t3 + DM2.thr4*t4 + DM2.thr5*t5 + DM2.thr6*t6
+DM3_1 | DM3.thr1*t1 + DM3.thr2*t2 + DM3.thr3*t3 + DM3.thr4*t4 + DM3.thr5*t5 + DM3.thr6*t6
+
+DP1_1 | DP1.thr1*t1 + DP1.thr2*t2 + DP1.thr3*t3 + DP1.thr4*t4 + DP1.thr5*t5 + DP1.thr6*t6
+DP2_1 | DP2.thr1*t1 + DP2.thr2*t2 + DP2.thr3*t3 + DP2.thr4*t4 + DP2.thr5*t5 + DP2.thr6*t6
+DP3_1 | DP3.thr1*t1 + DP3.thr2*t2 + DP3.thr3*t3 + DP3.thr4*t4 + DP3.thr5*t5 + DP3.thr6*t6
+
+DG1_1 | DG1.thr1*t1 + DG1.thr2*t2 + DG1.thr3*t3 + DG1.thr4*t4 + DG1.thr5*t5 + DG1.thr6*t6
+DG2_1 | DG2.thr1*t1 + DG2.thr2*t2 + DG2.thr3*t3 + DG2.thr4*t4 + DG2.thr5*t5 + DG2.thr6*t6
+DG3_1 | DG3.thr1*t1 + DG3.thr2*t2 + DG3.thr3*t3 + DG3.thr4*t4 + DG3.thr5*t5 + DG3.thr6*t6
+
+# latent response intercepts - fixed to 0
+CG1_1 ~  0*1
+CG2_1 ~  0*1
+CG3_1 ~  0*1
+CI1_1 ~  0*1
+CI2_1 ~  0*1
+CI3_1 ~  0*1
+SS1_1 ~  0*1
+SS2_1 ~  0*1
+SS3_1 ~  0*1
+SO1_1 ~  0*1
+SO2_1 ~  0*1
+SO3_1 ~  0*1
+DM1_1 ~  0*1
+DM2_1 ~  0*1
+DM3_1 ~  0*1
+DP1_1 ~  0*1
+DP2_1 ~  0*1
+DP3_1 ~  0*1
+DG1_1 ~  0*1
+DG2_1 ~  0*1
+DG3_1 ~  0*1
+
+# latent response scales - fixed to 1
+CG1_1 ~*~ 1*CG1_1
+CG2_1 ~*~ 1*CG2_1
+CG3_1 ~*~ 1*CG3_1
+CI1_1 ~*~ 1*CI1_1
+CI2_1 ~*~ 1*CI2_1
+CI3_1 ~*~ 1*CI3_1
+SS1_1 ~*~ 1*SS1_1
+SS2_1 ~*~ 1*SS2_1
+SS3_1 ~*~ 1*SS3_1
+SO1_1 ~*~ 1*SO1_1
+SO2_1 ~*~ 1*SO2_1
+SO3_1 ~*~ 1*SO3_1
+DM1_1 ~*~ 1*DM1_1
+DM2_1 ~*~ 1*DM2_1
+DM3_1 ~*~ 1*DM3_1
+DP1_1 ~*~ 1*DP1_1
+DP2_1 ~*~ 1*DP2_1
+DP3_1 ~*~ 1*DP3_1
+DG1_1 ~*~ 1*DG1_1
+DG2_1 ~*~ 1*DG2_1
+DG3_1 ~*~ 1*DG3_1
+
+## ================================================= ##
+##  Wave 2
+
+# Factor Loadings
+# NOTE: you need to enter the first item of each factor twice in order to set the label (X.lambda.1) so that lavaan estimates the loading instead of fixing it to 1
+C2 =~ NA*CG1_2 + C.lambda.1*CG1_2 + C.lambda.2*CG2_2 + C.lambda.3*CG3_2 + C.lambda.4*CI1_2 + C.lambda.5*CI2_2 + C.lambda.6*CI3_2
+S2 =~ NA*SS1_2 + S.lambda.1*SS1_2 + S.lambda.2*SS2_2 + S.lambda.3*SS3_2 + S.lambda.4*SO1_2 + S.lambda.5*SO2_2 + S.lambda.6*SO3_2
+D2 =~ NA*DM1_2 + D.lambda.1*DM1_2 + D.lambda.2*DM2_2 + D.lambda.3*DM3_2 + D.lambda.4*DP1_2 + D.lambda.5*DP2_2 + D.lambda.6*DP3_2 + D.lambda.7*DG1_2 + D.lambda.8*DG2_2 + D.lambda.9*DG3_2
+
+# Factor covariances
+C2 ~~ S2 + D2
+S2 ~~ D2
+
+# Factor Variances - freely estimate
+C2 ~~ NA*C2
+S2 ~~ NA*S2
+D2 ~~ NA*D2
+
+# Factor means/intercepts
+C2 ~ 0*1
+S2 ~ 0*1
+D2 ~ 0*1
+
+# Thresholds
+CG1_2 | CG1.thr1*t1 + CG1.thr2*t2 + CG1.thr3*t3 + CG1.thr4*t4 + CG1.thr5*t5 + CG1.thr6*t6
+CG2_2 | CG2.thr1*t1 + CG2.thr2*t2 + CG2.thr3*t3 + CG2.thr4*t4 + CG2.thr5*t5 + CG2.thr6*t6
+CG3_2 | CG3.thr1*t1 + CG3.thr2*t2 + CG3.thr3*t3 + CG3.thr4*t4 + CG3.thr5*t5 + CG3.thr6*t6
+
+CI1_2 | CI1.thr1*t1 + CI1.thr2*t2 + CI1.thr3*t3 + CI1.thr4*t4 + CI1.thr5*t5 + CI1.thr6*t6
+CI2_2 | CI2.thr1*t1 + CI2.thr2*t2 + CI2.thr3*t3 + CI2.thr4*t4 + CI2.thr5*t5 + CI2.thr6*t6
+CI3_2 | CI3.thr1*t1 + CI3.thr2*t2 + CI3.thr3*t3 + CI3.thr4*t4 + CI3.thr5*t5 + CI3.thr6*t6
+
+SS1_2 | SS1.thr1*t1 + SS1.thr2*t2 + SS1.thr3*t3 + SS1.thr4*t4 + SS1.thr5*t5 + SS1.thr6*t6
+SS2_2 | SS2.thr1*t1 + SS2.thr2*t2 + SS2.thr3*t3 + SS2.thr4*t4 + SS2.thr5*t5 + SS2.thr6*t6
+SS3_2 | SS3.thr1*t1 + SS3.thr2*t2 + SS3.thr3*t3 + SS3.thr4*t4 + SS3.thr5*t5 + SS3.thr6*t6
+
+SO1_2 | SO1.thr1*t1 + SO1.thr2*t2 + SO1.thr3*t3 + SO1.thr4*t4 + SO1.thr5*t5 + SO1.thr6*t6
+SO2_2 | SO2.thr1*t1 + SO2.thr2*t2 + SO2.thr3*t3 + SO2.thr4*t4 + SO2.thr5*t5 + SO2.thr6*t6
+SO3_2 | SO3.thr1*t1 + SO3.thr2*t2 + SO3.thr3*t3 + SO3.thr4*t4 + SO3.thr5*t5 + SO3.thr6*t6
+
+DM1_2 | DM1.thr1*t1 + DM1.thr2*t2 + DM1.thr3*t3 + DM1.thr4*t4 + DM1.thr5*t5 + DM1.thr6*t6
+DM2_2 | DM2.thr1*t1 + DM2.thr2*t2 + DM2.thr3*t3 + DM2.thr4*t4 + DM2.thr5*t5 + DM2.thr6*t6
+DM3_2 | DM3.thr1*t1 + DM3.thr2*t2 + DM3.thr3*t3 + DM3.thr4*t4 + DM3.thr5*t5 + DM3.thr6*t6
+
+DP1_2 | DP1.thr1*t1 + DP1.thr2*t2 + DP1.thr3*t3 + DP1.thr4*t4 + DP1.thr5*t5 + DP1.thr6*t6
+DP2_2 | DP2.thr1*t1 + DP2.thr2*t2 + DP2.thr3*t3 + DP2.thr4*t4 + DP2.thr5*t5 + DP2.thr6*t6
+DP3_2 | DP3.thr1*t1 + DP3.thr2*t2 + DP3.thr3*t3 + DP3.thr4*t4 + DP3.thr5*t5 + DP3.thr6*t6
+
+DG1_2 | DG1.thr1*t1 + DG1.thr2*t2 + DG1.thr3*t3 + DG1.thr4*t4 + DG1.thr5*t5 + DG1.thr6*t6
+DG2_2 | DG2.thr1*t1 + DG2.thr2*t2 + DG2.thr3*t3 + DG2.thr4*t4 + DG2.thr5*t5 + DG2.thr6*t6
+DG3_2 | DG3.thr1*t1 + DG3.thr2*t2 + DG3.thr3*t3 + DG3.thr4*t4 + DG3.thr5*t5 + DG3.thr6*t6
+
+# latent response intercepts - free - relative to wave 1
+CG1_2 ~  NA*1
+CG2_2 ~  NA*1
+CG3_2 ~  NA*1
+CI1_2 ~  NA*1
+CI2_2 ~  NA*1
+CI3_2 ~  NA*1
+SS1_2 ~  NA*1
+SS2_2 ~  NA*1
+SS3_2 ~  NA*1
+SO1_2 ~  NA*1
+SO2_2 ~  NA*1
+SO3_2 ~  NA*1
+DM1_2 ~  NA*1
+DM2_2 ~  NA*1
+DM3_2 ~  NA*1
+DP1_2 ~  NA*1
+DP2_2 ~  NA*1
+DP3_2 ~  NA*1
+DG1_2 ~  NA*1
+DG2_2 ~  NA*1
+DG3_2 ~  NA*1
+
+# latent response scales - free - relative to wave 1
+CG1_2 ~*~ NA*CG1_2
+CG2_2 ~*~ NA*CG2_2
+CG3_2 ~*~ NA*CG3_2
+CI1_2 ~*~ NA*CI1_2
+CI2_2 ~*~ NA*CI2_2
+CI3_2 ~*~ NA*CI3_2
+SS1_2 ~*~ NA*SS1_2
+SS2_2 ~*~ NA*SS2_2
+SS3_2 ~*~ NA*SS3_2
+SO1_2 ~*~ NA*SO1_2
+SO2_2 ~*~ NA*SO2_2
+SO3_2 ~*~ NA*SO3_2
+DM1_2 ~*~ NA*DM1_2
+DM2_2 ~*~ NA*DM2_2
+DM3_2 ~*~ NA*DM3_2
+DP1_2 ~*~ NA*DP1_2
+DP2_2 ~*~ NA*DP2_2
+DP3_2 ~*~ NA*DP3_2
+DG1_2 ~*~ NA*DG1_2
+DG2_2 ~*~ NA*DG2_2
+DG3_2 ~*~ NA*DG3_2
+
+## ================================================= ##
+# cross wave factor covariances 
+C1 ~~ C2 + S2 + D2
+S1 ~~ C2 + S2 + D2
+D1 ~~ C2 + S2 + D2
+# cross wave item residual covariances
+CG1_1 ~~ CG1_2 
+CG2_1 ~~ CG2_2 
+CG3_1 ~~ CG3_2 
+CI1_1 ~~ CI1_2
+CI2_1 ~~ CI2_2 
+CI3_1 ~~ CI3_2
+SS1_1 ~~ SS1_2
+SS2_1 ~~ SS2_2 
+SS3_1 ~~ SS3_2
+SO1_1 ~~ SO1_2 
+SO2_1 ~~ SO2_2 
+SO3_1 ~~ SO3_2 
+DM1_1 ~~ DM1_2 
+DM2_1 ~~ DM2_2 
+DM3_1 ~~ DM3_2 
+DP1_1 ~~ DP1_2 
+DP2_1 ~~ DP2_2 
+DP3_1 ~~ DP3_2 
+DG1_1 ~~ DG1_2 
+DG2_1 ~~ DG2_2 
+DG3_1 ~~ DG3_2
+"
+
+# fit model
+fit.loading.wide <- cfa(
+  model=loading.model.wide, 
+  data = wide.analysis.data,
+  ordered = T
+) 
+summary(fit.loading.wide, standardized=T, fit.measures=T)
+
+## test equivalence of thresholds, given equivalence of configural model
+lavTestLRT(fit.threshold.wide, fit.loading.wide, method = "satorra.bentler.2010")
+
+```
+
+The chi-square difference test gives evidence for the tenability of equality of factor loadings across waves. However, we can dive deeper to further probe this inference. Similar to the threshold, we can investigate the degree the variance will substantive change if will allow variance in the loadings. The following plot visualizes the difference in loadings across waves from the threshold model, where the loadings were different across waves.
+
+```{r visualize-loadings-threshold}
+
+thresh.model.loading.est <- lavaan::parTable(fit.threshold.wide) %>%
+  filter(op == "=~") %>%
+  mutate(
+    group = substr(lhs,nchar(lhs),1000),
+    lhs = substr(lhs,1,nchar(lhs)-1),
+    rhs = substr(rhs,1,nchar(rhs)-2)
+  )%>%
+  dplyr::select(lhs,rhs,group,est)%>%
+  pivot_wider(
+    id_cols=c("lhs","rhs"),
+    names_from = "group",
+    values_from = "est"
+  ) %>%
+  mutate(
+    loading_diff = `2`-`1`,
+    Domain = recode(lhs, 
+      `C`="Coherence",`S`="Significance",`D`="Direction")
+  )
+
+
+cols = c("Coherence"="grey25","Direction"="grey50", "Significance"="grey75")
+shp = c("Coherence"=18,"Direction"=16, "Significance"=15)
+ggplot(thresh.model.loading.est, 
+       aes(x=lhs, y=loading_diff))+
+  geom_point()+
+  geom_hline(yintercept = 0, linetype="dashed")+
+  labs(x="Domain", y="Difference in Loadings (Wave 2 - Wave 1)",
+       title="Difference in standardized loadings")+
+  theme_classic()
+
+thresh.model.loading.est %>%
+  mutate(item = rhs, `Wave 1` = `1`, `Wave 2` = `2`)%>%
+  dplyr::select(Domain, item, `Wave 1`, `Wave 2`, loading_diff)%>%
+  arrange(desc(loading_diff))%>%
+  kable(format="html", digits=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width = "100%", height="400px")
+```
+
+Similar to the thresholds, the difference between wave 1 and wave 2 estimates of the factor loadings is a small postive difference that may be negligible. However, it is interesting that the wave two loadings are nearly all larger, indicating that the strength of the relationship between items and factors may have increased to some degree at wave 2. The max *standardized* difference is 0.11 (DM1), which could be substantively meaningful depending on where this difference occurs (i.e., what is the starting magnitude). At wave 1, the loading was .76, and, at wave 2, the loading was .87. Both values are quite reasonably high for a standardized loading. This along with the finding that all loadings across both waves were at .65, I don't think we lose any significance amount of measurement precision by assuming equality of loadings. The lack of potential change in substantive interpretation along with the chi-square difference test gives reasonable evidene to proceed with investigating invariance.
+
+More generally, items showing the largest difference across waves should be investigated for the content of the items to investigate if the content may point to a reason for potential differences over time.
+
+Lastly, check the non-longitudinal approach.
+
+```{r invar-test-loadings}
+## metric invariance
+syntax.metric <- measEq.syntax(  
+  configural.model = mod.config,
+  data = analysis.dat,
+  ordered=T,
+  parameterization = "delta",
+  ID.cat = "Wu.Estabrook.2016",
+  ID.fac = "std.lv",
+  group = "wave",
+  group.equal = c("thresholds", "loadings")
+) # end creating syntax
+summary(syntax.metric)                    # summarize model features
+mod.metric <- as.character(syntax.metric) # save as text
+## fit model to data
+fit.loading <- cfa(mod.metric, data = analysis.dat, group = "wave")
+summary(fit.loading)
+## test equivalence of loadings, given equivalence of thresholds
+lavTestLRT(fit.threshold, fit.loading, method="satorra.bentler.2010")
+
+```
+
+Investigate residuals
+
+```{r loading-residuals}
+
+resid.loading.out <- lavaan::resid(fit.loading.wide, type="cor")
+
+resid.loading <- transform_resid_to_dataframe(resid.loading.out) %>%
+  mutate(
+    V1_Domain = recode(V1_Domain, `C`="Coherence",`S`="Significance",`D`="Direction"),
+    V2_Domain = recode(V2_Domain, `C`="Coherence",`S`="Significance",`D`="Direction")
+  )
+
+resid.loading %>%
+  arrange(desc(abs(resid)))%>%
+  kable(format="html", digits=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%",height="400px")
+
+resid.loading %>%
+  filter(V1_Domain==V2_Domain)%>%
+  ggplot(aes(x=resid,color=V1_Domain, fill=V1_Domain))+
+    geom_density(alpha=0.5, adjust=2)+
+    geom_vline(xintercept = 0, linetype='dashed')+
+    facet_wrap(.~Same_Wave)+
+    labs(x="Residual of correlations (Observed - Model Implied)")+
+    annotate("text",x=-0.15,y=9, label="Over estimate")+
+    annotate("text",x=0.15,y=9, label="Under estimate")+
+    theme_bw()
+
+```
+
+Mod indices
+
+```{r loading-mod indices}
+modindices(fit.loading.wide,sort. = T, maximum.number = 20)
+
+```
+
+## Test Latent Response Intercept (scalar) Invariance
+
+Testing equality of the latent response intercepts given that the thresholds and loadings are held constant. testing the latent response variables have equal intercepts across waves, the latent factor intercepts can now be freely estimated in wave 2. This is again part of the complexity of this approach is that by restricting part of the model results in another part of the model being identifiable and comparable across waves.
+
+```{r invar-test-lrintercept-longitudinal}
+
+lrintercept.model.wide <- "
+## ================================================= ##
+## Wave 1
+
+# Factor Loadings
+# NOTE: you need to enter the first item of each factor twice in order to set the label (X.lambda.1) so that lavaan estimates the loading instead of fixing it to 1
+C1 =~ NA*CG1_1 + C.lambda.1*CG1_1 + C.lambda.2*CG2_1 + C.lambda.3*CG3_1 + C.lambda.4*CI1_1 + C.lambda.5*CI2_1 + C.lambda.6*CI3_1
+S1 =~ NA*SS1_1 + S.lambda.1*SS1_1 + S.lambda.2*SS2_1 + S.lambda.3*SS3_1 + S.lambda.4*SO1_1 + S.lambda.5*SO2_1 + S.lambda.6*SO3_1
+D1 =~ NA*DM1_1 + D.lambda.1*DM1_1 + D.lambda.2*DM2_1 + D.lambda.3*DM3_1 + D.lambda.4*DP1_1 + D.lambda.5*DP2_1 + D.lambda.6*DP3_1 + D.lambda.7*DG1_1 + D.lambda.8*DG2_1 + D.lambda.9*DG3_1
+
+# Factor covariances
+C1 ~~ S1 + D1
+S1 ~~ D1 
+
+# Factor variances
+C1 ~~ 1*C1
+S1 ~~ 1*S1
+D1 ~~ 1*D1
+
+# Factor means/intercepts
+C1 ~ 0*1
+S1 ~ 0*1
+D1 ~ 0*1
+
+# Thresholds
+CG1_1 | CG1.thr1*t1 + CG1.thr2*t2 + CG1.thr3*t3 + CG1.thr4*t4 + CG1.thr5*t5 + CG1.thr6*t6
+CG2_1 | CG2.thr1*t1 + CG2.thr2*t2 + CG2.thr3*t3 + CG2.thr4*t4 + CG2.thr5*t5 + CG2.thr6*t6
+CG3_1 | CG3.thr1*t1 + CG3.thr2*t2 + CG3.thr3*t3 + CG3.thr4*t4 + CG3.thr5*t5 + CG3.thr6*t6
+
+CI1_1 | CI1.thr1*t1 + CI1.thr2*t2 + CI1.thr3*t3 + CI1.thr4*t4 + CI1.thr5*t5 + CI1.thr6*t6
+CI2_1 | CI2.thr1*t1 + CI2.thr2*t2 + CI2.thr3*t3 + CI2.thr4*t4 + CI2.thr5*t5 + CI2.thr6*t6
+CI3_1 | CI3.thr1*t1 + CI3.thr2*t2 + CI3.thr3*t3 + CI3.thr4*t4 + CI3.thr5*t5 + CI3.thr6*t6
+
+SS1_1 | SS1.thr1*t1 + SS1.thr2*t2 + SS1.thr3*t3 + SS1.thr4*t4 + SS1.thr5*t5 + SS1.thr6*t6
+SS2_1 | SS2.thr1*t1 + SS2.thr2*t2 + SS2.thr3*t3 + SS2.thr4*t4 + SS2.thr5*t5 + SS2.thr6*t6
+SS3_1 | SS3.thr1*t1 + SS3.thr2*t2 + SS3.thr3*t3 + SS3.thr4*t4 + SS3.thr5*t5 + SS3.thr6*t6
+
+SO1_1 | SO1.thr1*t1 + SO1.thr2*t2 + SO1.thr3*t3 + SO1.thr4*t4 + SO1.thr5*t5 + SO1.thr6*t6
+SO2_1 | SO2.thr1*t1 + SO2.thr2*t2 + SO2.thr3*t3 + SO2.thr4*t4 + SO2.thr5*t5 + SO2.thr6*t6
+SO3_1 | SO3.thr1*t1 + SO3.thr2*t2 + SO3.thr3*t3 + SO3.thr4*t4 + SO3.thr5*t5 + SO3.thr6*t6
+
+DM1_1 | DM1.thr1*t1 + DM1.thr2*t2 + DM1.thr3*t3 + DM1.thr4*t4 + DM1.thr5*t5 + DM1.thr6*t6
+DM2_1 | DM2.thr1*t1 + DM2.thr2*t2 + DM2.thr3*t3 + DM2.thr4*t4 + DM2.thr5*t5 + DM2.thr6*t6
+DM3_1 | DM3.thr1*t1 + DM3.thr2*t2 + DM3.thr3*t3 + DM3.thr4*t4 + DM3.thr5*t5 + DM3.thr6*t6
+
+DP1_1 | DP1.thr1*t1 + DP1.thr2*t2 + DP1.thr3*t3 + DP1.thr4*t4 + DP1.thr5*t5 + DP1.thr6*t6
+DP2_1 | DP2.thr1*t1 + DP2.thr2*t2 + DP2.thr3*t3 + DP2.thr4*t4 + DP2.thr5*t5 + DP2.thr6*t6
+DP3_1 | DP3.thr1*t1 + DP3.thr2*t2 + DP3.thr3*t3 + DP3.thr4*t4 + DP3.thr5*t5 + DP3.thr6*t6
+
+DG1_1 | DG1.thr1*t1 + DG1.thr2*t2 + DG1.thr3*t3 + DG1.thr4*t4 + DG1.thr5*t5 + DG1.thr6*t6
+DG2_1 | DG2.thr1*t1 + DG2.thr2*t2 + DG2.thr3*t3 + DG2.thr4*t4 + DG2.thr5*t5 + DG2.thr6*t6
+DG3_1 | DG3.thr1*t1 + DG3.thr2*t2 + DG3.thr3*t3 + DG3.thr4*t4 + DG3.thr5*t5 + DG3.thr6*t6
+
+# latent response intercepts - fixed to 0
+CG1_1 ~  0*1
+CG2_1 ~  0*1
+CG3_1 ~  0*1
+CI1_1 ~  0*1
+CI2_1 ~  0*1
+CI3_1 ~  0*1
+SS1_1 ~  0*1
+SS2_1 ~  0*1
+SS3_1 ~  0*1
+SO1_1 ~  0*1
+SO2_1 ~  0*1
+SO3_1 ~  0*1
+DM1_1 ~  0*1
+DM2_1 ~  0*1
+DM3_1 ~  0*1
+DP1_1 ~  0*1
+DP2_1 ~  0*1
+DP3_1 ~  0*1
+DG1_1 ~  0*1
+DG2_1 ~  0*1
+DG3_1 ~  0*1
+
+# latent response scales - fixed to 1
+CG1_1 ~*~ 1*CG1_1
+CG2_1 ~*~ 1*CG2_1
+CG3_1 ~*~ 1*CG3_1
+CI1_1 ~*~ 1*CI1_1
+CI2_1 ~*~ 1*CI2_1
+CI3_1 ~*~ 1*CI3_1
+SS1_1 ~*~ 1*SS1_1
+SS2_1 ~*~ 1*SS2_1
+SS3_1 ~*~ 1*SS3_1
+SO1_1 ~*~ 1*SO1_1
+SO2_1 ~*~ 1*SO2_1
+SO3_1 ~*~ 1*SO3_1
+DM1_1 ~*~ 1*DM1_1
+DM2_1 ~*~ 1*DM2_1
+DM3_1 ~*~ 1*DM3_1
+DP1_1 ~*~ 1*DP1_1
+DP2_1 ~*~ 1*DP2_1
+DP3_1 ~*~ 1*DP3_1
+DG1_1 ~*~ 1*DG1_1
+DG2_1 ~*~ 1*DG2_1
+DG3_1 ~*~ 1*DG3_1
+
+## ================================================= ##
+##  Wave 2
+
+# Factor Loadings
+# NOTE: you need to enter the first item of each factor twice in order to set the label (X.lambda.1) so that lavaan estimates the loading instead of fixing it to 1
+C2 =~ NA*CG1_2 + C.lambda.1*CG1_2 + C.lambda.2*CG2_2 + C.lambda.3*CG3_2 + C.lambda.4*CI1_2 + C.lambda.5*CI2_2 + C.lambda.6*CI3_2
+S2 =~ NA*SS1_2 + S.lambda.1*SS1_2 + S.lambda.2*SS2_2 + S.lambda.3*SS3_2 + S.lambda.4*SO1_2 + S.lambda.5*SO2_2 + S.lambda.6*SO3_2
+D2 =~ NA*DM1_2 + D.lambda.1*DM1_2 + D.lambda.2*DM2_2 + D.lambda.3*DM3_2 + D.lambda.4*DP1_2 + D.lambda.5*DP2_2 + D.lambda.6*DP3_2 + D.lambda.7*DG1_2 + D.lambda.8*DG2_2 + D.lambda.9*DG3_2
+
+# Factor covariances
+C2 ~~ S2 + D2
+S2 ~~ D2
+
+# Factor Variances - freely estimate
+C2 ~~ NA*C2
+S2 ~~ NA*S2
+D2 ~~ NA*D2
+
+# Factor means/intercepts - freely estimate
+C2 ~ NA*1
+S2 ~ NA*1
+D2 ~ NA*1
+
+# Thresholds
+CG1_2 | CG1.thr1*t1 + CG1.thr2*t2 + CG1.thr3*t3 + CG1.thr4*t4 + CG1.thr5*t5 + CG1.thr6*t6
+CG2_2 | CG2.thr1*t1 + CG2.thr2*t2 + CG2.thr3*t3 + CG2.thr4*t4 + CG2.thr5*t5 + CG2.thr6*t6
+CG3_2 | CG3.thr1*t1 + CG3.thr2*t2 + CG3.thr3*t3 + CG3.thr4*t4 + CG3.thr5*t5 + CG3.thr6*t6
+
+CI1_2 | CI1.thr1*t1 + CI1.thr2*t2 + CI1.thr3*t3 + CI1.thr4*t4 + CI1.thr5*t5 + CI1.thr6*t6
+CI2_2 | CI2.thr1*t1 + CI2.thr2*t2 + CI2.thr3*t3 + CI2.thr4*t4 + CI2.thr5*t5 + CI2.thr6*t6
+CI3_2 | CI3.thr1*t1 + CI3.thr2*t2 + CI3.thr3*t3 + CI3.thr4*t4 + CI3.thr5*t5 + CI3.thr6*t6
+
+SS1_2 | SS1.thr1*t1 + SS1.thr2*t2 + SS1.thr3*t3 + SS1.thr4*t4 + SS1.thr5*t5 + SS1.thr6*t6
+SS2_2 | SS2.thr1*t1 + SS2.thr2*t2 + SS2.thr3*t3 + SS2.thr4*t4 + SS2.thr5*t5 + SS2.thr6*t6
+SS3_2 | SS3.thr1*t1 + SS3.thr2*t2 + SS3.thr3*t3 + SS3.thr4*t4 + SS3.thr5*t5 + SS3.thr6*t6
+
+SO1_2 | SO1.thr1*t1 + SO1.thr2*t2 + SO1.thr3*t3 + SO1.thr4*t4 + SO1.thr5*t5 + SO1.thr6*t6
+SO2_2 | SO2.thr1*t1 + SO2.thr2*t2 + SO2.thr3*t3 + SO2.thr4*t4 + SO2.thr5*t5 + SO2.thr6*t6
+SO3_2 | SO3.thr1*t1 + SO3.thr2*t2 + SO3.thr3*t3 + SO3.thr4*t4 + SO3.thr5*t5 + SO3.thr6*t6
+
+DM1_2 | DM1.thr1*t1 + DM1.thr2*t2 + DM1.thr3*t3 + DM1.thr4*t4 + DM1.thr5*t5 + DM1.thr6*t6
+DM2_2 | DM2.thr1*t1 + DM2.thr2*t2 + DM2.thr3*t3 + DM2.thr4*t4 + DM2.thr5*t5 + DM2.thr6*t6
+DM3_2 | DM3.thr1*t1 + DM3.thr2*t2 + DM3.thr3*t3 + DM3.thr4*t4 + DM3.thr5*t5 + DM3.thr6*t6
+
+DP1_2 | DP1.thr1*t1 + DP1.thr2*t2 + DP1.thr3*t3 + DP1.thr4*t4 + DP1.thr5*t5 + DP1.thr6*t6
+DP2_2 | DP2.thr1*t1 + DP2.thr2*t2 + DP2.thr3*t3 + DP2.thr4*t4 + DP2.thr5*t5 + DP2.thr6*t6
+DP3_2 | DP3.thr1*t1 + DP3.thr2*t2 + DP3.thr3*t3 + DP3.thr4*t4 + DP3.thr5*t5 + DP3.thr6*t6
+
+DG1_2 | DG1.thr1*t1 + DG1.thr2*t2 + DG1.thr3*t3 + DG1.thr4*t4 + DG1.thr5*t5 + DG1.thr6*t6
+DG2_2 | DG2.thr1*t1 + DG2.thr2*t2 + DG2.thr3*t3 + DG2.thr4*t4 + DG2.thr5*t5 + DG2.thr6*t6
+DG3_2 | DG3.thr1*t1 + DG3.thr2*t2 + DG3.thr3*t3 + DG3.thr4*t4 + DG3.thr5*t5 + DG3.thr6*t6
+
+# latent response intercepts
+CG1_2 ~  0*1
+CG2_2 ~  0*1
+CG3_2 ~  0*1
+CI1_2 ~  0*1
+CI2_2 ~  0*1
+CI3_2 ~  0*1
+SS1_2 ~  0*1
+SS2_2 ~  0*1
+SS3_2 ~  0*1
+SO1_2 ~  0*1
+SO2_2 ~  0*1
+SO3_2 ~  0*1
+DM1_2 ~  0*1
+DM2_2 ~  0*1
+DM3_2 ~  0*1
+DP1_2 ~  0*1
+DP2_2 ~  0*1
+DP3_2 ~  0*1
+DG1_2 ~  0*1
+DG2_2 ~  0*1
+DG3_2 ~  0*1
+
+# latent response scales - free - relative to wave 1
+CG1_2 ~*~ NA*CG1_2
+CG2_2 ~*~ NA*CG2_2
+CG3_2 ~*~ NA*CG3_2
+CI1_2 ~*~ NA*CI1_2
+CI2_2 ~*~ NA*CI2_2
+CI3_2 ~*~ NA*CI3_2
+SS1_2 ~*~ NA*SS1_2
+SS2_2 ~*~ NA*SS2_2
+SS3_2 ~*~ NA*SS3_2
+SO1_2 ~*~ NA*SO1_2
+SO2_2 ~*~ NA*SO2_2
+SO3_2 ~*~ NA*SO3_2
+DM1_2 ~*~ NA*DM1_2
+DM2_2 ~*~ NA*DM2_2
+DM3_2 ~*~ NA*DM3_2
+DP1_2 ~*~ NA*DP1_2
+DP2_2 ~*~ NA*DP2_2
+DP3_2 ~*~ NA*DP3_2
+DG1_2 ~*~ NA*DG1_2
+DG2_2 ~*~ NA*DG2_2
+DG3_2 ~*~ NA*DG3_2
+
+## ================================================= ##
+# cross wave factor covariances 
+C1 ~~ C2 + S2 + D2
+S1 ~~ C2 + S2 + D2
+D1 ~~ C2 + S2 + D2
+# cross wave item residual covariances
+CG1_1 ~~ CG1_2 
+CG2_1 ~~ CG2_2 
+CG3_1 ~~ CG3_2 
+CI1_1 ~~ CI1_2
+CI2_1 ~~ CI2_2 
+CI3_1 ~~ CI3_2
+SS1_1 ~~ SS1_2
+SS2_1 ~~ SS2_2 
+SS3_1 ~~ SS3_2
+SO1_1 ~~ SO1_2 
+SO2_1 ~~ SO2_2 
+SO3_1 ~~ SO3_2 
+DM1_1 ~~ DM1_2 
+DM2_1 ~~ DM2_2 
+DM3_1 ~~ DM3_2 
+DP1_1 ~~ DP1_2 
+DP2_1 ~~ DP2_2 
+DP3_1 ~~ DP3_2 
+DG1_1 ~~ DG1_2 
+DG2_1 ~~ DG2_2 
+DG3_1 ~~ DG3_2
+"
+
+# fit model
+fit.lrintercept.wide <- cfa(
+  model=lrintercept.model.wide, 
+  data = wide.analysis.data,
+  ordered = T
+) 
+summary(fit.lrintercept.wide, standardized=T, fit.measures=T)
+
+## test equivalence of thresholds, given equivalence of configural model
+lavTestLRT(fit.loading.wide, fit.lrintercept.wide, method = "satorra.bentler.2010")
+
+```
+
+The chi-square difference test gives evidence of invariance in latent response intercepts across waves. Differences in the latent response intercept would represent a shift in the probability of endorsing all categories between the waves across all levels of the latent variable, not just the average. Meaning, that a negative shift in the latent response intercept between waves would indicate a tendency to endorse lower response categories.
+
+An example of this is shown next after extracting and finding the item with the last latent response mean difference.
+
+```{r visualize-lrintercept-differences}
+
+loading.model.lrintercept.est <- lavaan::parTable(fit.loading.wide) %>%
+  filter(op == "~1", est!=0) %>%
+  mutate(
+    group = substr(lhs,nchar(lhs),1000),
+    item = substr(lhs,1,nchar(lhs)-2),
+    Domain = recode(substr(lhs,1,1), 
+      `C`="Coherence",`S`="Significance",`D`="Direction")
+  ) %>% dplyr::select(Domain, item, est)
+
+
+cols = c("Coherence"="grey25","Direction"="grey50", "Significance"="grey75")
+shp = c("Coherence"=18,"Direction"=16, "Significance"=15)
+ggplot(loading.model.lrintercept.est, 
+       aes(x=Domain, y=est))+
+  geom_point()+
+  geom_hline(yintercept = 0, linetype="dashed")+
+  labs(x="Domain", y="Difference in intercepts (Wave 2 - Wave 1)",
+       title="Difference in latent response intercepts")+
+  theme_classic()
+
+loading.model.lrintercept.est %>%
+  arrange(-desc(est))%>%
+  kable(format="html", digits=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width = "100%", height="400px")
+
+# grab thresholds for item SS1
+tau_vec <- lavaan::parTable(fit.loading.wide) %>%
+  filter(op == "|", lhs=="SS1_1") %>%
+  dplyr::select(est)
+tau_vec <- tau_vec$est
+
+# response probabilities for LV Intercept = 0
+prob_vec1 <- numeric(7)
+# Pr(y=1)
+prob_vec1[1] <- exp(tau_vec[1])/(1+exp(tau_vec[1]))
+# Pr(y=2)
+prob_vec1[2] <- exp(tau_vec[2])/(1+exp(tau_vec[2]))-exp(tau_vec[1])/(1+exp(tau_vec[1]))
+# Pr(y=3)
+prob_vec1[3] <- exp(tau_vec[3])/(1+exp(tau_vec[3]))-exp(tau_vec[2])/(1+exp(tau_vec[2]))
+# Pr(y=4)
+prob_vec1[4] <- exp(tau_vec[4])/(1+exp(tau_vec[4]))-exp(tau_vec[3])/(1+exp(tau_vec[3]))
+# Pr(y=5)
+prob_vec1[5] <- exp(tau_vec[5])/(1+exp(tau_vec[5]))-exp(tau_vec[4])/(1+exp(tau_vec[4]))
+# Pr(y=6)
+prob_vec1[6] <- exp(tau_vec[6])/(1+exp(tau_vec[6]))-exp(tau_vec[5])/(1+exp(tau_vec[5]))
+# Pr(y=7)
+prob_vec1[7] <- 1-exp(tau_vec[6])/(1+exp(tau_vec[6]))
+# adds to 1
+sum(prob_vec1)
+prob_vec1
+
+# response probabilities for LV Intercept = -0.13
+prob_vec2 <- numeric(7)
+nu = -0.13
+# Pr(y=1)
+prob_vec2[1] <- exp(tau_vec[1]+nu)/(1+exp(tau_vec[1]+nu))
+# Pr(y=2)
+prob_vec2[2] <- exp(tau_vec[2]+nu)/(1+exp(tau_vec[2]+nu))-exp(tau_vec[1]+nu)/(1+exp(tau_vec[1]+nu))
+# Pr(y=3)
+prob_vec2[3] <- exp(tau_vec[3]+nu)/(1+exp(tau_vec[3]+nu))-exp(tau_vec[2]+nu)/(1+exp(tau_vec[2]+nu))
+# Pr(y=4)
+prob_vec2[4] <- exp(tau_vec[4]+nu)/(1+exp(tau_vec[4]+nu))-exp(tau_vec[3]+nu)/(1+exp(tau_vec[3]+nu))
+# Pr(y=5)
+prob_vec2[5] <- exp(tau_vec[5]+nu)/(1+exp(tau_vec[5]+nu))-exp(tau_vec[4]+nu)/(1+exp(tau_vec[4]+nu))
+# Pr(y=6)
+prob_vec2[6] <- exp(tau_vec[6]+nu)/(1+exp(tau_vec[6]+nu))-exp(tau_vec[5]+nu)/(1+exp(tau_vec[5]+nu))
+# Pr(y=7)
+prob_vec2[7] <- 1-exp(tau_vec[6]+nu)/(1+exp(tau_vec[6]+nu))
+# adds to 1
+sum(prob_vec2)
+prob_vec2
+
+# difference between waves
+prob_vec2 - prob_vec1
+# wave item mean (sum (P*X))
+sum(prob_vec1*1:7)
+sum(prob_vec2*1:7) # wave 2 with a lower item intercept has a lower item mean
+
+```
+
+Backwards compared to thresholds, a lower mean on the latent response would indicate a lower response on average to the item. Meaning, items with a lower latent response variable average will have a lower average on the observed items, on average. The major gain we get from moving from the observed categorical indicators to the latent respone variables is a easier comparison on a continuous scale as opposed to the observed categorical scale.
+
+Next, test the multi-group way.
+
+```{r test-invar-lrintercepts}
+
+## scalar invariance
+syntax.scalar <- measEq.syntax(
+  configural.model = mod.config,
+  data = analysis.dat,
+  ordered=T,
+  parameterization = "delta",
+  ID.cat = "Wu.Estabrook.2016",
+  ID.fac = "std.lv",
+  group = "wave",
+  group.equal = c("thresholds", "loadings", "intercepts")
+) #end create syntax
+summary(syntax.scalar)# summarize model features
+mod.scalar <- as.character(syntax.scalar) # save as text
+## fit model to data
+fit.lrintercept <- cfa(mod.scalar, data = analysis.dat, group = "wave")
+summary(fit.lrintercept, standardized=T, fit.measures=T)
+## test equivalence of intercepts, given equal loadings and thresholds
+lavTestLRT(fit.loading, fit.lrintercept, method="satorra.bentler.2010")
+
+```
+
+Again, more evidence of the equivalence of the latent response variables across waves.
+
+Investigate residuals
+
+```{r lrintercept-residuals}
+
+resid.lrintercept.out <- lavaan::resid(fit.lrintercept.wide, type="cor")
+
+resid.lrintercept <- transform_resid_to_dataframe(resid.lrintercept.out) %>%
+  mutate(
+    V1_Domain = recode(V1_Domain, `C`="Coherence",`S`="Significance",`D`="Direction"),
+    V2_Domain = recode(V2_Domain, `C`="Coherence",`S`="Significance",`D`="Direction")
+  )
+
+resid.lrintercept %>%
+  arrange(desc(abs(resid)))%>%
+  kable(format="html", digits=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%",height="400px")
+
+resid.lrintercept %>%
+  filter(V1_Domain==V2_Domain)%>%
+  ggplot(aes(x=resid,color=V1_Domain, fill=V1_Domain))+
+    geom_density(alpha=0.5, adjust=2)+
+    geom_vline(xintercept = 0, linetype='dashed')+
+    facet_wrap(.~Same_Wave)+
+    labs(x="Residual of correlations (Observed - Model Implied)")+
+    annotate("text",x=-0.15,y=9, label="Over estimate")+
+    annotate("text",x=0.15,y=9, label="Under estimate")+
+    theme_bw()
+
+```
+
+Mod indices
+
+```{r lrintercept-mod indices}
+modindices(fit.lrintercept.wide,sort. = T, maximum.number = 20)
+
+```
+
+## Test Residual variance (latent response; strict) Invariance
+
+Strict invariance for categorical indicators requires assessing the equality of the "scales" or residual variances on the latent response variable. There is a one-to-one relationship between the scale and residual variances of a latent response variable.
+
+```{r invar-test-lrvariance-longitudinal}
+
+lrvariance.model.wide <- "
+## ================================================= ##
+## Wave 1
+
+# Factor Loadings
+# NOTE: you need to enter the first item of each factor twice in order to set the label (X.lambda.1) so that lavaan estimates the loading instead of fixing it to 1
+C1 =~ NA*CG1_1 + C.lambda.1*CG1_1 + C.lambda.2*CG2_1 + C.lambda.3*CG3_1 + C.lambda.4*CI1_1 + C.lambda.5*CI2_1 + C.lambda.6*CI3_1
+S1 =~ NA*SS1_1 + S.lambda.1*SS1_1 + S.lambda.2*SS2_1 + S.lambda.3*SS3_1 + S.lambda.4*SO1_1 + S.lambda.5*SO2_1 + S.lambda.6*SO3_1
+D1 =~ NA*DM1_1 + D.lambda.1*DM1_1 + D.lambda.2*DM2_1 + D.lambda.3*DM3_1 + D.lambda.4*DP1_1 + D.lambda.5*DP2_1 + D.lambda.6*DP3_1 + D.lambda.7*DG1_1 + D.lambda.8*DG2_1 + D.lambda.9*DG3_1
+
+# Factor covariances
+C1 ~~ S1 + D1
+S1 ~~ D1 
+
+# Factor variances
+C1 ~~ 1*C1
+S1 ~~ 1*S1
+D1 ~~ 1*D1
+
+# Factor means/intercepts
+C1 ~ 0*1
+S1 ~ 0*1
+D1 ~ 0*1
+
+# Thresholds
+CG1_1 | CG1.thr1*t1 + CG1.thr2*t2 + CG1.thr3*t3 + CG1.thr4*t4 + CG1.thr5*t5 + CG1.thr6*t6
+CG2_1 | CG2.thr1*t1 + CG2.thr2*t2 + CG2.thr3*t3 + CG2.thr4*t4 + CG2.thr5*t5 + CG2.thr6*t6
+CG3_1 | CG3.thr1*t1 + CG3.thr2*t2 + CG3.thr3*t3 + CG3.thr4*t4 + CG3.thr5*t5 + CG3.thr6*t6
+
+CI1_1 | CI1.thr1*t1 + CI1.thr2*t2 + CI1.thr3*t3 + CI1.thr4*t4 + CI1.thr5*t5 + CI1.thr6*t6
+CI2_1 | CI2.thr1*t1 + CI2.thr2*t2 + CI2.thr3*t3 + CI2.thr4*t4 + CI2.thr5*t5 + CI2.thr6*t6
+CI3_1 | CI3.thr1*t1 + CI3.thr2*t2 + CI3.thr3*t3 + CI3.thr4*t4 + CI3.thr5*t5 + CI3.thr6*t6
+
+SS1_1 | SS1.thr1*t1 + SS1.thr2*t2 + SS1.thr3*t3 + SS1.thr4*t4 + SS1.thr5*t5 + SS1.thr6*t6
+SS2_1 | SS2.thr1*t1 + SS2.thr2*t2 + SS2.thr3*t3 + SS2.thr4*t4 + SS2.thr5*t5 + SS2.thr6*t6
+SS3_1 | SS3.thr1*t1 + SS3.thr2*t2 + SS3.thr3*t3 + SS3.thr4*t4 + SS3.thr5*t5 + SS3.thr6*t6
+
+SO1_1 | SO1.thr1*t1 + SO1.thr2*t2 + SO1.thr3*t3 + SO1.thr4*t4 + SO1.thr5*t5 + SO1.thr6*t6
+SO2_1 | SO2.thr1*t1 + SO2.thr2*t2 + SO2.thr3*t3 + SO2.thr4*t4 + SO2.thr5*t5 + SO2.thr6*t6
+SO3_1 | SO3.thr1*t1 + SO3.thr2*t2 + SO3.thr3*t3 + SO3.thr4*t4 + SO3.thr5*t5 + SO3.thr6*t6
+
+DM1_1 | DM1.thr1*t1 + DM1.thr2*t2 + DM1.thr3*t3 + DM1.thr4*t4 + DM1.thr5*t5 + DM1.thr6*t6
+DM2_1 | DM2.thr1*t1 + DM2.thr2*t2 + DM2.thr3*t3 + DM2.thr4*t4 + DM2.thr5*t5 + DM2.thr6*t6
+DM3_1 | DM3.thr1*t1 + DM3.thr2*t2 + DM3.thr3*t3 + DM3.thr4*t4 + DM3.thr5*t5 + DM3.thr6*t6
+
+DP1_1 | DP1.thr1*t1 + DP1.thr2*t2 + DP1.thr3*t3 + DP1.thr4*t4 + DP1.thr5*t5 + DP1.thr6*t6
+DP2_1 | DP2.thr1*t1 + DP2.thr2*t2 + DP2.thr3*t3 + DP2.thr4*t4 + DP2.thr5*t5 + DP2.thr6*t6
+DP3_1 | DP3.thr1*t1 + DP3.thr2*t2 + DP3.thr3*t3 + DP3.thr4*t4 + DP3.thr5*t5 + DP3.thr6*t6
+
+DG1_1 | DG1.thr1*t1 + DG1.thr2*t2 + DG1.thr3*t3 + DG1.thr4*t4 + DG1.thr5*t5 + DG1.thr6*t6
+DG2_1 | DG2.thr1*t1 + DG2.thr2*t2 + DG2.thr3*t3 + DG2.thr4*t4 + DG2.thr5*t5 + DG2.thr6*t6
+DG3_1 | DG3.thr1*t1 + DG3.thr2*t2 + DG3.thr3*t3 + DG3.thr4*t4 + DG3.thr5*t5 + DG3.thr6*t6
+
+# latent response intercepts - fixed to 0
+CG1_1 ~  0*1
+CG2_1 ~  0*1
+CG3_1 ~  0*1
+CI1_1 ~  0*1
+CI2_1 ~  0*1
+CI3_1 ~  0*1
+SS1_1 ~  0*1
+SS2_1 ~  0*1
+SS3_1 ~  0*1
+SO1_1 ~  0*1
+SO2_1 ~  0*1
+SO3_1 ~  0*1
+DM1_1 ~  0*1
+DM2_1 ~  0*1
+DM3_1 ~  0*1
+DP1_1 ~  0*1
+DP2_1 ~  0*1
+DP3_1 ~  0*1
+DG1_1 ~  0*1
+DG2_1 ~  0*1
+DG3_1 ~  0*1
+
+# latent response scales - fixed to 1
+CG1_1 ~*~ 1*CG1_1
+CG2_1 ~*~ 1*CG2_1
+CG3_1 ~*~ 1*CG3_1
+CI1_1 ~*~ 1*CI1_1
+CI2_1 ~*~ 1*CI2_1
+CI3_1 ~*~ 1*CI3_1
+SS1_1 ~*~ 1*SS1_1
+SS2_1 ~*~ 1*SS2_1
+SS3_1 ~*~ 1*SS3_1
+SO1_1 ~*~ 1*SO1_1
+SO2_1 ~*~ 1*SO2_1
+SO3_1 ~*~ 1*SO3_1
+DM1_1 ~*~ 1*DM1_1
+DM2_1 ~*~ 1*DM2_1
+DM3_1 ~*~ 1*DM3_1
+DP1_1 ~*~ 1*DP1_1
+DP2_1 ~*~ 1*DP2_1
+DP3_1 ~*~ 1*DP3_1
+DG1_1 ~*~ 1*DG1_1
+DG2_1 ~*~ 1*DG2_1
+DG3_1 ~*~ 1*DG3_1
+
+## ================================================= ##
+##  Wave 2
+
+# Factor Loadings
+# NOTE: you need to enter the first item of each factor twice in order to set the label (X.lambda.1) so that lavaan estimates the loading instead of fixing it to 1
+C2 =~ NA*CG1_2 + C.lambda.1*CG1_2 + C.lambda.2*CG2_2 + C.lambda.3*CG3_2 + C.lambda.4*CI1_2 + C.lambda.5*CI2_2 + C.lambda.6*CI3_2
+S2 =~ NA*SS1_2 + S.lambda.1*SS1_2 + S.lambda.2*SS2_2 + S.lambda.3*SS3_2 + S.lambda.4*SO1_2 + S.lambda.5*SO2_2 + S.lambda.6*SO3_2
+D2 =~ NA*DM1_2 + D.lambda.1*DM1_2 + D.lambda.2*DM2_2 + D.lambda.3*DM3_2 + D.lambda.4*DP1_2 + D.lambda.5*DP2_2 + D.lambda.6*DP3_2 + D.lambda.7*DG1_2 + D.lambda.8*DG2_2 + D.lambda.9*DG3_2
+
+# Factor covariances
+C2 ~~ S2 + D2
+S2 ~~ D2
+
+# Factor Variances - freely estimate
+C2 ~~ NA*C2
+S2 ~~ NA*S2
+D2 ~~ NA*D2
+
+# Factor means/intercepts - freely estimate
+C2 ~ NA*1
+S2 ~ NA*1
+D2 ~ NA*1
+
+# Thresholds
+CG1_2 | CG1.thr1*t1 + CG1.thr2*t2 + CG1.thr3*t3 + CG1.thr4*t4 + CG1.thr5*t5 + CG1.thr6*t6
+CG2_2 | CG2.thr1*t1 + CG2.thr2*t2 + CG2.thr3*t3 + CG2.thr4*t4 + CG2.thr5*t5 + CG2.thr6*t6
+CG3_2 | CG3.thr1*t1 + CG3.thr2*t2 + CG3.thr3*t3 + CG3.thr4*t4 + CG3.thr5*t5 + CG3.thr6*t6
+
+CI1_2 | CI1.thr1*t1 + CI1.thr2*t2 + CI1.thr3*t3 + CI1.thr4*t4 + CI1.thr5*t5 + CI1.thr6*t6
+CI2_2 | CI2.thr1*t1 + CI2.thr2*t2 + CI2.thr3*t3 + CI2.thr4*t4 + CI2.thr5*t5 + CI2.thr6*t6
+CI3_2 | CI3.thr1*t1 + CI3.thr2*t2 + CI3.thr3*t3 + CI3.thr4*t4 + CI3.thr5*t5 + CI3.thr6*t6
+
+SS1_2 | SS1.thr1*t1 + SS1.thr2*t2 + SS1.thr3*t3 + SS1.thr4*t4 + SS1.thr5*t5 + SS1.thr6*t6
+SS2_2 | SS2.thr1*t1 + SS2.thr2*t2 + SS2.thr3*t3 + SS2.thr4*t4 + SS2.thr5*t5 + SS2.thr6*t6
+SS3_2 | SS3.thr1*t1 + SS3.thr2*t2 + SS3.thr3*t3 + SS3.thr4*t4 + SS3.thr5*t5 + SS3.thr6*t6
+
+SO1_2 | SO1.thr1*t1 + SO1.thr2*t2 + SO1.thr3*t3 + SO1.thr4*t4 + SO1.thr5*t5 + SO1.thr6*t6
+SO2_2 | SO2.thr1*t1 + SO2.thr2*t2 + SO2.thr3*t3 + SO2.thr4*t4 + SO2.thr5*t5 + SO2.thr6*t6
+SO3_2 | SO3.thr1*t1 + SO3.thr2*t2 + SO3.thr3*t3 + SO3.thr4*t4 + SO3.thr5*t5 + SO3.thr6*t6
+
+DM1_2 | DM1.thr1*t1 + DM1.thr2*t2 + DM1.thr3*t3 + DM1.thr4*t4 + DM1.thr5*t5 + DM1.thr6*t6
+DM2_2 | DM2.thr1*t1 + DM2.thr2*t2 + DM2.thr3*t3 + DM2.thr4*t4 + DM2.thr5*t5 + DM2.thr6*t6
+DM3_2 | DM3.thr1*t1 + DM3.thr2*t2 + DM3.thr3*t3 + DM3.thr4*t4 + DM3.thr5*t5 + DM3.thr6*t6
+
+DP1_2 | DP1.thr1*t1 + DP1.thr2*t2 + DP1.thr3*t3 + DP1.thr4*t4 + DP1.thr5*t5 + DP1.thr6*t6
+DP2_2 | DP2.thr1*t1 + DP2.thr2*t2 + DP2.thr3*t3 + DP2.thr4*t4 + DP2.thr5*t5 + DP2.thr6*t6
+DP3_2 | DP3.thr1*t1 + DP3.thr2*t2 + DP3.thr3*t3 + DP3.thr4*t4 + DP3.thr5*t5 + DP3.thr6*t6
+
+DG1_2 | DG1.thr1*t1 + DG1.thr2*t2 + DG1.thr3*t3 + DG1.thr4*t4 + DG1.thr5*t5 + DG1.thr6*t6
+DG2_2 | DG2.thr1*t1 + DG2.thr2*t2 + DG2.thr3*t3 + DG2.thr4*t4 + DG2.thr5*t5 + DG2.thr6*t6
+DG3_2 | DG3.thr1*t1 + DG3.thr2*t2 + DG3.thr3*t3 + DG3.thr4*t4 + DG3.thr5*t5 + DG3.thr6*t6
+
+# latent response intercepts
+CG1_2 ~  0*1
+CG2_2 ~  0*1
+CG3_2 ~  0*1
+CI1_2 ~  0*1
+CI2_2 ~  0*1
+CI3_2 ~  0*1
+SS1_2 ~  0*1
+SS2_2 ~  0*1
+SS3_2 ~  0*1
+SO1_2 ~  0*1
+SO2_2 ~  0*1
+SO3_2 ~  0*1
+DM1_2 ~  0*1
+DM2_2 ~  0*1
+DM3_2 ~  0*1
+DP1_2 ~  0*1
+DP2_2 ~  0*1
+DP3_2 ~  0*1
+DG1_2 ~  0*1
+DG2_2 ~  0*1
+DG3_2 ~  0*1
+
+# latent response scales - free - relative to wave 1
+CG1_2 ~*~ 1*CG1_2
+CG2_2 ~*~ 1*CG2_2
+CG3_2 ~*~ 1*CG3_2
+CI1_2 ~*~ 1*CI1_2
+CI2_2 ~*~ 1*CI2_2
+CI3_2 ~*~ 1*CI3_2
+SS1_2 ~*~ 1*SS1_2
+SS2_2 ~*~ 1*SS2_2
+SS3_2 ~*~ 1*SS3_2
+SO1_2 ~*~ 1*SO1_2
+SO2_2 ~*~ 1*SO2_2
+SO3_2 ~*~ 1*SO3_2
+DM1_2 ~*~ 1*DM1_2
+DM2_2 ~*~ 1*DM2_2
+DM3_2 ~*~ 1*DM3_2
+DP1_2 ~*~ 1*DP1_2
+DP2_2 ~*~ 1*DP2_2
+DP3_2 ~*~ 1*DP3_2
+DG1_2 ~*~ 1*DG1_2
+DG2_2 ~*~ 1*DG2_2
+DG3_2 ~*~ 1*DG3_2
+
+## ================================================= ##
+# cross wave factor covariances 
+C1 ~~ C2 + S2 + D2
+S1 ~~ C2 + S2 + D2
+D1 ~~ C2 + S2 + D2
+# cross wave item residual covariances
+CG1_1 ~~ CG1_2 
+CG2_1 ~~ CG2_2 
+CG3_1 ~~ CG3_2 
+CI1_1 ~~ CI1_2
+CI2_1 ~~ CI2_2 
+CI3_1 ~~ CI3_2
+SS1_1 ~~ SS1_2
+SS2_1 ~~ SS2_2 
+SS3_1 ~~ SS3_2
+SO1_1 ~~ SO1_2 
+SO2_1 ~~ SO2_2 
+SO3_1 ~~ SO3_2 
+DM1_1 ~~ DM1_2 
+DM2_1 ~~ DM2_2 
+DM3_1 ~~ DM3_2 
+DP1_1 ~~ DP1_2 
+DP2_1 ~~ DP2_2 
+DP3_1 ~~ DP3_2 
+DG1_1 ~~ DG1_2 
+DG2_1 ~~ DG2_2 
+DG3_1 ~~ DG3_2
+"
+
+# fit model
+fit.lrvariance.wide <- cfa(
+  model=lrvariance.model.wide, 
+  data = wide.analysis.data,
+  ordered = T
+) 
+summary(fit.lrvariance.wide, standardized=T, fit.measures=T)
+
+lavTestLRT(fit.lrintercept.wide,fit.lrvariance.wide, method = "satorra.bentler.2010")
+
+```
+
+The chi-square test gives evidence of invariance of the latent response scales/variances across waves. This gives strong evidence that we can compare the factors across waves with confidence that the factors at least statistically comparable.
+
+```{r invar-test-lrvariances}
+
+## strict invariance
+syntax.strict <- measEq.syntax(
+  configural.model = mod.config,
+  data = analysis.dat,
+  ordered=T,
+  parameterization = "theta",
+  ID.cat = "Wu.Estabrook.2016",
+  ID.fac = "std.lv",
+  group = "wave",
+  group.equal = c("thresholds", "loadings", "intercepts", "residuals")
+) #end create syntax
+summary(syntax.strict)                    # summarize model features
+mod.strict <- as.character(syntax.strict) # save as text
+## fit model to data
+fit.lrvariance <- cfa(mod.strict, data = analysis.dat, group = "wave")
+summary(fit.lrvariance, standardized=T, fit.measures=T)
+## test equivalence of residual variance
+lavTestLRT(fit.lrintercept, fit.lrvariance, method="satorra.bentler.2010")
+
+```
+
+Investigate residuals
+
+```{r lrvariance-residuals}
+
+resid.lrvariance.out <- lavaan::resid(fit.lrvariance.wide, type="cor")
+
+resid.lrvariance <- transform_resid_to_dataframe(resid.lrvariance.out) %>%
+  mutate(
+    V1_Domain = recode(V1_Domain, `C`="Coherence",`S`="Significance",`D`="Direction"),
+    V2_Domain = recode(V2_Domain, `C`="Coherence",`S`="Significance",`D`="Direction")
+  )
+
+resid.lrvariance %>%
+  arrange(desc(abs(resid)))%>%
+  kable(format="html", digits=3)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%",height="400px")
+
+resid.lrvariance %>%
+  filter(V1_Domain==V2_Domain)%>%
+  ggplot(aes(x=resid,color=V1_Domain, fill=V1_Domain))+
+    geom_density(alpha=0.5, adjust=2)+
+    geom_vline(xintercept = 0, linetype='dashed')+
+    facet_wrap(.~Same_Wave)+
+    labs(x="Residual of correlations (Observed - Model Implied)")+
+    annotate("text",x=-0.15,y=9, label="Over estimate")+
+    annotate("text",x=0.15,y=9, label="Under estimate")+
+    theme_bw()
+
+```
+
+Mod indices
+
+```{r lrvariance-mod indices}
+
+modindices(fit.lrvariance.wide,sort. = T, maximum.number = 20)
+
+```
+
+## Wrap-Up Summary Information
+
+```{r}
+
+fit.comp.wide <- compareFit(fit.config.wide, fit.threshold.wide, fit.loading.wide, fit.lrintercept.wide, fit.lrvariance.wide, argsLRT = list(method="satorra.bentler.2010"))
+summary(fit.comp.wide)
+
+fit.comp <- compareFit(fit.config, fit.threshold, fit.loading, fit.lrintercept, fit.lrvariance, argsLRT = list(method="satorra.bentler.2010"))
+summary(fit.comp)
+```

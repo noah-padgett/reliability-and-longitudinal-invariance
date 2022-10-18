@@ -3,3 +3,333 @@ title: "Reliability"
 ---
 
 On this page, reliability is discussed in more detail.
+
+```{r markdown-setup}
+#|cache=T
+#|autodept=T
+#|cache.comments=T
+```
+
+# Setup of Analysis
+
+```{r set-up}
+# load packages
+source("code/load_packages.R")
+set.seed(12345) # for replicability
+
+```
+
+```{r read-in-data}
+datw1 <- readr::read_csv("data/UBC_Data_Wave1_Clean.csv");
+datw1$wave = 1
+datw2 <- readr::read_csv("data/UBC_Data_Wave2_Clean.csv")
+datw2$wave = 2
+mydata <- full_join(datw1, datw2)
+ITEMS <- c(paste0("CG",1:3), paste0("CI",1:3), paste0("SS",1:3), paste0("SO",1:3), paste0("DM",1:3), paste0("DP",1:3), paste0("DG",1:3))
+
+analysis.dat <- mydata %>%
+  filter(keep_case==1) %>%
+  dplyr::select(all_of(c("HSP ID","wave", "Gender","Age","Year_School",ITEMS)))%>%
+  group_by(`HSP ID`)%>%
+  mutate(
+    person_response_total = n()
+  ) %>%
+  filter(person_response_total==2)%>%
+  dplyr::group_by(`HSP ID`, wave) %>%
+  dplyr::mutate(n = dplyr::n())%>%# make sure there's only 1 per person
+  filter(n==1)
+  
+
+# convert to "wide" data
+wide.analysis.data <- analysis.dat %>%
+  pivot_wider(
+    id_cols = "HSP ID",
+    names_from = "wave",
+    values_from = all_of(ITEMS)
+  )
+```
+
+## Model Specification
+
+```{r model-specification}
+
+full_model <- "
+## ================================================= ##
+## Wave 1
+
+# Factor Loadings
+# NOTE: you need to enter the first item of each factor twice in order to set the label (X.lambda.1) so that lavaan estimates the loading instead of fixing it to 1
+C1 =~ NA*CG1_1 + C.lambda.1*CG1_1 + C.lambda.2*CG2_1 + C.lambda.3*CG3_1 + C.lambda.4*CI1_1 + C.lambda.5*CI2_1 + C.lambda.6*CI3_1
+S1 =~ NA*SS1_1 + S.lambda.1*SS1_1 + S.lambda.2*SS2_1 + S.lambda.3*SS3_1 + S.lambda.4*SO1_1 + S.lambda.5*SO2_1 + S.lambda.6*SO3_1
+D1 =~ NA*DM1_1 + D.lambda.1*DM1_1 + D.lambda.2*DM2_1 + D.lambda.3*DM3_1 + D.lambda.4*DP1_1 + D.lambda.5*DP2_1 + D.lambda.6*DP3_1 + D.lambda.7*DG1_1 + D.lambda.8*DG2_1 + D.lambda.9*DG3_1
+
+# Factor covariances
+C1 ~~ S1 + D1
+S1 ~~ D1 
+
+# Factor variances
+C1 ~~ 1*C1
+S1 ~~ 1*S1
+D1 ~~ 1*D1
+
+# Factor means/intercepts
+C1 ~ 0*1
+S1 ~ 0*1
+D1 ~ 0*1
+
+# Thresholds
+CG1_1 | CG1.thr1*t1 + CG1.thr2*t2 + CG1.thr3*t3 + CG1.thr4*t4 + CG1.thr5*t5 + CG1.thr6*t6
+CG2_1 | CG2.thr1*t1 + CG2.thr2*t2 + CG2.thr3*t3 + CG2.thr4*t4 + CG2.thr5*t5 + CG2.thr6*t6
+CG3_1 | CG3.thr1*t1 + CG3.thr2*t2 + CG3.thr3*t3 + CG3.thr4*t4 + CG3.thr5*t5 + CG3.thr6*t6
+
+CI1_1 | CI1.thr1*t1 + CI1.thr2*t2 + CI1.thr3*t3 + CI1.thr4*t4 + CI1.thr5*t5 + CI1.thr6*t6
+CI2_1 | CI2.thr1*t1 + CI2.thr2*t2 + CI2.thr3*t3 + CI2.thr4*t4 + CI2.thr5*t5 + CI2.thr6*t6
+CI3_1 | CI3.thr1*t1 + CI3.thr2*t2 + CI3.thr3*t3 + CI3.thr4*t4 + CI3.thr5*t5 + CI3.thr6*t6
+
+SS1_1 | SS1.thr1*t1 + SS1.thr2*t2 + SS1.thr3*t3 + SS1.thr4*t4 + SS1.thr5*t5 + SS1.thr6*t6
+SS2_1 | SS2.thr1*t1 + SS2.thr2*t2 + SS2.thr3*t3 + SS2.thr4*t4 + SS2.thr5*t5 + SS2.thr6*t6
+SS3_1 | SS3.thr1*t1 + SS3.thr2*t2 + SS3.thr3*t3 + SS3.thr4*t4 + SS3.thr5*t5 + SS3.thr6*t6
+
+SO1_1 | SO1.thr1*t1 + SO1.thr2*t2 + SO1.thr3*t3 + SO1.thr4*t4 + SO1.thr5*t5 + SO1.thr6*t6
+SO2_1 | SO2.thr1*t1 + SO2.thr2*t2 + SO2.thr3*t3 + SO2.thr4*t4 + SO2.thr5*t5 + SO2.thr6*t6
+SO3_1 | SO3.thr1*t1 + SO3.thr2*t2 + SO3.thr3*t3 + SO3.thr4*t4 + SO3.thr5*t5 + SO3.thr6*t6
+
+DM1_1 | DM1.thr1*t1 + DM1.thr2*t2 + DM1.thr3*t3 + DM1.thr4*t4 + DM1.thr5*t5 + DM1.thr6*t6
+DM2_1 | DM2.thr1*t1 + DM2.thr2*t2 + DM2.thr3*t3 + DM2.thr4*t4 + DM2.thr5*t5 + DM2.thr6*t6
+DM3_1 | DM3.thr1*t1 + DM3.thr2*t2 + DM3.thr3*t3 + DM3.thr4*t4 + DM3.thr5*t5 + DM3.thr6*t6
+
+DP1_1 | DP1.thr1*t1 + DP1.thr2*t2 + DP1.thr3*t3 + DP1.thr4*t4 + DP1.thr5*t5 + DP1.thr6*t6
+DP2_1 | DP2.thr1*t1 + DP2.thr2*t2 + DP2.thr3*t3 + DP2.thr4*t4 + DP2.thr5*t5 + DP2.thr6*t6
+DP3_1 | DP3.thr1*t1 + DP3.thr2*t2 + DP3.thr3*t3 + DP3.thr4*t4 + DP3.thr5*t5 + DP3.thr6*t6
+
+DG1_1 | DG1.thr1*t1 + DG1.thr2*t2 + DG1.thr3*t3 + DG1.thr4*t4 + DG1.thr5*t5 + DG1.thr6*t6
+DG2_1 | DG2.thr1*t1 + DG2.thr2*t2 + DG2.thr3*t3 + DG2.thr4*t4 + DG2.thr5*t5 + DG2.thr6*t6
+DG3_1 | DG3.thr1*t1 + DG3.thr2*t2 + DG3.thr3*t3 + DG3.thr4*t4 + DG3.thr5*t5 + DG3.thr6*t6
+
+# latent response intercepts - fixed to 0
+CG1_1 ~  0*1
+CG2_1 ~  0*1
+CG3_1 ~  0*1
+CI1_1 ~  0*1
+CI2_1 ~  0*1
+CI3_1 ~  0*1
+SS1_1 ~  0*1
+SS2_1 ~  0*1
+SS3_1 ~  0*1
+SO1_1 ~  0*1
+SO2_1 ~  0*1
+SO3_1 ~  0*1
+DM1_1 ~  0*1
+DM2_1 ~  0*1
+DM3_1 ~  0*1
+DP1_1 ~  0*1
+DP2_1 ~  0*1
+DP3_1 ~  0*1
+DG1_1 ~  0*1
+DG2_1 ~  0*1
+DG3_1 ~  0*1
+
+# latent response scales - fixed to 1
+CG1_1 ~~ 1*CG1_1
+CG2_1 ~~ 1*CG2_1
+CG3_1 ~~ 1*CG3_1
+CI1_1 ~~ 1*CI1_1
+CI2_1 ~~ 1*CI2_1
+CI3_1 ~~ 1*CI3_1
+SS1_1 ~~ 1*SS1_1
+SS2_1 ~~ 1*SS2_1
+SS3_1 ~~ 1*SS3_1
+SO1_1 ~~ 1*SO1_1
+SO2_1 ~~ 1*SO2_1
+SO3_1 ~~ 1*SO3_1
+DM1_1 ~~ 1*DM1_1
+DM2_1 ~~ 1*DM2_1
+DM3_1 ~~ 1*DM3_1
+DP1_1 ~~ 1*DP1_1
+DP2_1 ~~ 1*DP2_1
+DP3_1 ~~ 1*DP3_1
+DG1_1 ~~ 1*DG1_1
+DG2_1 ~~ 1*DG2_1
+DG3_1 ~~ 1*DG3_1
+
+## ================================================= ##
+##  Wave 2
+
+# Factor Loadings
+# NOTE: you need to enter the first item of each factor twice in order to set the label (X.lambda.1) so that lavaan estimates the loading instead of fixing it to 1
+C2 =~ NA*CG1_2 + C.lambda.1*CG1_2 + C.lambda.2*CG2_2 + C.lambda.3*CG3_2 + C.lambda.4*CI1_2 + C.lambda.5*CI2_2 + C.lambda.6*CI3_2
+S2 =~ NA*SS1_2 + S.lambda.1*SS1_2 + S.lambda.2*SS2_2 + S.lambda.3*SS3_2 + S.lambda.4*SO1_2 + S.lambda.5*SO2_2 + S.lambda.6*SO3_2
+D2 =~ NA*DM1_2 + D.lambda.1*DM1_2 + D.lambda.2*DM2_2 + D.lambda.3*DM3_2 + D.lambda.4*DP1_2 + D.lambda.5*DP2_2 + D.lambda.6*DP3_2 + D.lambda.7*DG1_2 + D.lambda.8*DG2_2 + D.lambda.9*DG3_2
+
+# Factor covariances
+C2 ~~ S2 + D2
+S2 ~~ D2
+
+# Factor Variances - freely estimate
+C2 ~~ NA*C2 + phi.c*C2
+S2 ~~ NA*S2 + phi.s*S2
+D2 ~~ NA*D2 + phi.d*D2
+
+# Factor means/intercepts - freely estimate
+C2 ~ NA*1
+S2 ~ NA*1
+D2 ~ NA*1
+
+# Thresholds
+CG1_2 | CG1.thr1*t1 + CG1.thr2*t2 + CG1.thr3*t3 + CG1.thr4*t4 + CG1.thr5*t5 + CG1.thr6*t6
+CG2_2 | CG2.thr1*t1 + CG2.thr2*t2 + CG2.thr3*t3 + CG2.thr4*t4 + CG2.thr5*t5 + CG2.thr6*t6
+CG3_2 | CG3.thr1*t1 + CG3.thr2*t2 + CG3.thr3*t3 + CG3.thr4*t4 + CG3.thr5*t5 + CG3.thr6*t6
+
+CI1_2 | CI1.thr1*t1 + CI1.thr2*t2 + CI1.thr3*t3 + CI1.thr4*t4 + CI1.thr5*t5 + CI1.thr6*t6
+CI2_2 | CI2.thr1*t1 + CI2.thr2*t2 + CI2.thr3*t3 + CI2.thr4*t4 + CI2.thr5*t5 + CI2.thr6*t6
+CI3_2 | CI3.thr1*t1 + CI3.thr2*t2 + CI3.thr3*t3 + CI3.thr4*t4 + CI3.thr5*t5 + CI3.thr6*t6
+
+SS1_2 | SS1.thr1*t1 + SS1.thr2*t2 + SS1.thr3*t3 + SS1.thr4*t4 + SS1.thr5*t5 + SS1.thr6*t6
+SS2_2 | SS2.thr1*t1 + SS2.thr2*t2 + SS2.thr3*t3 + SS2.thr4*t4 + SS2.thr5*t5 + SS2.thr6*t6
+SS3_2 | SS3.thr1*t1 + SS3.thr2*t2 + SS3.thr3*t3 + SS3.thr4*t4 + SS3.thr5*t5 + SS3.thr6*t6
+
+SO1_2 | SO1.thr1*t1 + SO1.thr2*t2 + SO1.thr3*t3 + SO1.thr4*t4 + SO1.thr5*t5 + SO1.thr6*t6
+SO2_2 | SO2.thr1*t1 + SO2.thr2*t2 + SO2.thr3*t3 + SO2.thr4*t4 + SO2.thr5*t5 + SO2.thr6*t6
+SO3_2 | SO3.thr1*t1 + SO3.thr2*t2 + SO3.thr3*t3 + SO3.thr4*t4 + SO3.thr5*t5 + SO3.thr6*t6
+
+DM1_2 | DM1.thr1*t1 + DM1.thr2*t2 + DM1.thr3*t3 + DM1.thr4*t4 + DM1.thr5*t5 + DM1.thr6*t6
+DM2_2 | DM2.thr1*t1 + DM2.thr2*t2 + DM2.thr3*t3 + DM2.thr4*t4 + DM2.thr5*t5 + DM2.thr6*t6
+DM3_2 | DM3.thr1*t1 + DM3.thr2*t2 + DM3.thr3*t3 + DM3.thr4*t4 + DM3.thr5*t5 + DM3.thr6*t6
+
+DP1_2 | DP1.thr1*t1 + DP1.thr2*t2 + DP1.thr3*t3 + DP1.thr4*t4 + DP1.thr5*t5 + DP1.thr6*t6
+DP2_2 | DP2.thr1*t1 + DP2.thr2*t2 + DP2.thr3*t3 + DP2.thr4*t4 + DP2.thr5*t5 + DP2.thr6*t6
+DP3_2 | DP3.thr1*t1 + DP3.thr2*t2 + DP3.thr3*t3 + DP3.thr4*t4 + DP3.thr5*t5 + DP3.thr6*t6
+
+DG1_2 | DG1.thr1*t1 + DG1.thr2*t2 + DG1.thr3*t3 + DG1.thr4*t4 + DG1.thr5*t5 + DG1.thr6*t6
+DG2_2 | DG2.thr1*t1 + DG2.thr2*t2 + DG2.thr3*t3 + DG2.thr4*t4 + DG2.thr5*t5 + DG2.thr6*t6
+DG3_2 | DG3.thr1*t1 + DG3.thr2*t2 + DG3.thr3*t3 + DG3.thr4*t4 + DG3.thr5*t5 + DG3.thr6*t6
+
+# latent response intercepts
+CG1_2 ~  0*1
+CG2_2 ~  0*1
+CG3_2 ~  0*1
+CI1_2 ~  0*1
+CI2_2 ~  0*1
+CI3_2 ~  0*1
+SS1_2 ~  0*1
+SS2_2 ~  0*1
+SS3_2 ~  0*1
+SO1_2 ~  0*1
+SO2_2 ~  0*1
+SO3_2 ~  0*1
+DM1_2 ~  0*1
+DM2_2 ~  0*1
+DM3_2 ~  0*1
+DP1_2 ~  0*1
+DP2_2 ~  0*1
+DP3_2 ~  0*1
+DG1_2 ~  0*1
+DG2_2 ~  0*1
+DG3_2 ~  0*1
+
+# latent response variances
+CG1_2 ~~ 1*CG1_2
+CG2_2 ~~ 1*CG2_2
+CG3_2 ~~ 1*CG3_2
+CI1_2 ~~ 1*CI1_2
+CI2_2 ~~ 1*CI2_2
+CI3_2 ~~ 1*CI3_2
+SS1_2 ~~ 1*SS1_2
+SS2_2 ~~ 1*SS2_2
+SS3_2 ~~ 1*SS3_2
+SO1_2 ~~ 1*SO1_2
+SO2_2 ~~ 1*SO2_2
+SO3_2 ~~ 1*SO3_2
+DM1_2 ~~ 1*DM1_2
+DM2_2 ~~ 1*DM2_2
+DM3_2 ~~ 1*DM3_2
+DP1_2 ~~ 1*DP1_2
+DP2_2 ~~ 1*DP2_2
+DP3_2 ~~ 1*DP3_2
+DG1_2 ~~ 1*DG1_2
+DG2_2 ~~ 1*DG2_2
+DG3_2 ~~ 1*DG3_2
+
+## ================================================= ##
+# cross wave factor covariances 
+C1 ~~ C2 + S2 + D2
+S1 ~~ C2 + S2 + D2
+D1 ~~ C2 + S2 + D2
+# cross wave item residual covariances
+CG1_1 ~~ CG1_2 
+CG2_1 ~~ CG2_2 
+CG3_1 ~~ CG3_2 
+CI1_1 ~~ CI1_2
+CI2_1 ~~ CI2_2 
+CI3_1 ~~ CI3_2
+SS1_1 ~~ SS1_2
+SS2_1 ~~ SS2_2 
+SS3_1 ~~ SS3_2
+SO1_1 ~~ SO1_2 
+SO2_1 ~~ SO2_2 
+SO3_1 ~~ SO3_2 
+DM1_1 ~~ DM1_2 
+DM2_1 ~~ DM2_2 
+DM3_1 ~~ DM3_2 
+DP1_1 ~~ DP1_2 
+DP2_1 ~~ DP2_2 
+DP3_1 ~~ DP3_2 
+DG1_1 ~~ DG1_2 
+DG2_1 ~~ DG2_2 
+DG3_1 ~~ DG3_2
+
+# define omega for estimation
+omega.c :=  (C.lambda.1 + C.lambda.2 + C.lambda.3 + C.lambda.4 + C.lambda.5 + C.lambda.6)^2/( (C.lambda.1 + C.lambda.2 + C.lambda.3 + C.lambda.4 + C.lambda.5 + C.lambda.6)^2 + 6)
+omega.s :=  (S.lambda.1 + S.lambda.2 + S.lambda.3 + S.lambda.4 + S.lambda.5 + S.lambda.6)^2/((S.lambda.1 + S.lambda.2 + S.lambda.3 + S.lambda.4 + S.lambda.5 + S.lambda.6)^2 + 6)
+omega.d :=  (D.lambda.1 + D.lambda.2 + D.lambda.3 + D.lambda.4 + D.lambda.5 + D.lambda.6 + D.lambda.7 + D.lambda.8 + D.lambda.9)^2/((D.lambda.1 + D.lambda.2 + D.lambda.3 + D.lambda.4 + D.lambda.5 + D.lambda.6 + D.lambda.7 + D.lambda.8 + D.lambda.9)^2+9)
+
+omega.c2 :=  (C.lambda.1 + C.lambda.2 + C.lambda.3 + C.lambda.4 + C.lambda.5 + C.lambda.6)^2*phi.c/( (C.lambda.1 + C.lambda.2 + C.lambda.3 + C.lambda.4 + C.lambda.5 + C.lambda.6)^2*phi.c + 6)
+omega.s2 :=  (S.lambda.1 + S.lambda.2 + S.lambda.3 + S.lambda.4 + S.lambda.5 + S.lambda.6)^2*phi.s/((S.lambda.1 + S.lambda.2 + S.lambda.3 + S.lambda.4 + S.lambda.5 + S.lambda.6)^2*phi.s + 6)
+omega.d2 :=  (D.lambda.1 + D.lambda.2 + D.lambda.3 + D.lambda.4 + D.lambda.5 + D.lambda.6 + D.lambda.7 + D.lambda.8 + D.lambda.9)^2*phi.d/((D.lambda.1 + D.lambda.2 + D.lambda.3 + D.lambda.4 + D.lambda.5 + D.lambda.6 + D.lambda.7 + D.lambda.8 + D.lambda.9)^2*phi.d+9)
+
+"
+
+```
+
+# Obtain Reliability Estimates
+
+```{r fit-model}
+# fit model
+fit <- cfa(
+  model=full_model, 
+  data = wide.analysis.data,
+  ordered = T
+) 
+summary(fit, standardized=T, fit.measures=T)
+
+```
+
+# Traditional Sum-Score Approach
+
+Naive computation of reliability.
+
+```{r}
+
+wide.analysis.data <- wide.analysis.data %>%
+  mutate(
+    C1 = CG1_1 + CG2_1 + CG3_1 + CI1_1 + CI2_1 + CI3_1,
+    C2 = CG1_2 + CG2_2 + CG3_2 + CI1_2 + CI2_2 + CI3_2,
+    S1 = SO1_1 + SO2_1 + SO3_1 + SS1_1 + SS2_1 + SS3_1,
+    S2 = SO1_2 + SO2_2 + SO3_2 + SS1_2 + SS2_2 + SS3_2,
+    D1 = DG1_1 + DG2_1 + DG3_1 + DP1_1 + DP2_1 + DP3_1 + DM1_1 + DM2_1 + DM3_1,
+    D2 = DG1_2 + DG2_2 + DG3_2 + DP1_2 + DP2_2 + DP3_2 + DM1_2 + DM2_2 + DM3_2
+  )
+
+ggplot(wide.analysis.data, aes(x=C1, y=C2))+
+  geom_jitter()+
+  theme_classic()
+ggplot(wide.analysis.data, aes(x=S1, y=S2))+
+  geom_jitter()+
+  theme_classic()
+ggplot(wide.analysis.data, aes(x=D1, y=D2))+
+  geom_jitter()+
+  theme_classic()
+
+cor(wide.analysis.data[,c("C1","C2","S1","S2","D1","D2")])
+# est: .65, .67, .66
+```

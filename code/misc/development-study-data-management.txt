@@ -1,0 +1,104 @@
+---
+title: "POOLS Development: Data Management"
+author: "R. Noah Padgett, Shan Jiang, Laura Shero, & Todd Kettler"
+date: "2020-11-16"
+output: html_document
+---
+
+```{r data, message=F, error=F, warning=F}
+
+source("code/load_packages.R")
+set.seed(20201116)
+mydata <- readxl::read_xlsx("data/data-2020-11-16/POOLS_data_2020-11-16.xlsx")
+
+naniar::vis_miss(mydata)
+
+```
+
+
+Next, look at the summary level statistics of the raw data.
+
+```{r summary}
+
+mydata %>% summarise(N = n())
+
+apply(mydata[-1,],2, summary)
+
+```
+
+# Basic Item Analysis
+
+```{r item-analysis}
+
+psychometric::item.exam(mydata[,7:63],discrim = T)
+
+
+```
+
+# Data Cleaning
+
+Here, I proceed with data munging to impute missing values and then construct two split halves.
+
+## Missing Data 
+
+```{r imputing}
+
+naniar::vis_miss(mydata)
+anyNA(mydata)
+
+# remove cases with less than 43% complete (i.e., just openned then closed survey)
+mydata.imp <- mydata %>%
+  filter(Progress >= 43)
+
+# impute class/teach based on progress
+mydata.imp <- mydata.imp %>%
+  group_by(Progress) %>%
+  mutate(class = ifelse(is.na(class) == T, round(median(class, na.rm=T),0), class),
+         teach = ifelse(is.na(teach) == T, round(median(teach, na.rm=T),0), teach))
+
+# impute missing survey responses by median of group of class/teach
+mydata.imp <- mydata.imp %>%
+  group_by(class, teach) %>%
+  mutate(across(Q4_1:Q7_15, ~ifelse(is.na(.x), round(median(.x, na.rm=T),0), .x)))
+
+
+
+anyNA(mydata.imp)
+
+```
+
+## Check Imputation
+
+To check the quality of the imputation, I laid out the correlation matrices of both datasets in one heatmap with the below diagonal being the raw data and the above diagonal being the imputed data. These should be nearly difficult to see any differences.
+
+```{r imp-qual}
+
+c1 <- cor(mydata[7:63], use="pairwise.complete")
+c2 <- cor(mydata.imp[7:63])
+
+corMatrix <- c1
+corMatrix[lower.tri(corMatrix)] <- c2[lower.tri(c2)]
+
+ggcorrplot(corMatrix,outline.color = "white")
+
+```
+
+
+## Randomly split
+
+
+```{r split}
+
+
+mydata.imp$random.split <- rbinom(nrow(mydata.imp),1, 0.5)
+
+dat1 <- filter(mydata.imp, random.split==0)
+dat2 <- filter(mydata.imp, random.split==1)
+
+
+write.table(dat1, "data/data-2020-11-16/pools_data_split1_2020_11_16.txt", sep="\t", row.names = F)
+write.table(dat2, "data/data-2020-11-16/pools_data_split2_2020_11_16.txt", sep="\t", row.names = F)
+
+```
+
+

@@ -1,0 +1,247 @@
+---
+title: "POOLS Development: CFA Invariance Testing"
+author: "R. Noah Padgett, Shan Jiang, Laura Shero, & Todd Kettlers"
+date: "2020-11-16"
+output:
+  workflowr::wflow_html:
+    toc: true
+    code_folding: show
+---
+
+# Data
+
+```{r data}
+
+source("code/load_packages.R")
+
+mydata1 <- read.table("data/data-2020-11-16/pools_data_split1_2020_11_16.txt", sep="\t", header=T)
+mydata2 <- read.table("data/data-2020-11-16/pools_data_split2_2020_11_16.txt", sep="\t", header=T)
+mydata <- full_join(mydata1, mydata2)
+# transform responses to (-2, 2) scale
+mydata[, 7:63] <- apply(mydata[,7:63], 2, function(x){x-3})
+mydata$teach <- factor(mydata$teach, levels=c(1, 2), labels=c("No to Online Teaching Experience", "Yes to Online Teaching Experience"))
+```
+
+## Data Summary
+
+```{r data-sum}
+
+use.var <- c(paste0("Q4_",c(3:5,9, 11, 15, 18)), #13
+             paste0("Q5_",c(1:3,5:6, 12)), #8-> 14- 21
+             paste0("Q6_",c(2, 5:8, 11)), #9 -> 22-30
+             paste0("Q7_",c(2, 4:5, 7:8, 14))) #31-38
+
+psych::describe(
+  mydata[, use.var]
+)
+
+psych::describeBy(
+  mydata[, use.var],group = mydata$teach
+)
+
+```
+
+
+# MG-CFA
+
+The hypothesized four-factor solution is shown below.
+
+
+The above model can be convert to code using the below model.
+
+```{r}
+
+mod.config <- "
+EL =~ Q4_3 + Q4_4 + Q4_5 + Q4_9 + Q4_11 + Q4_15 + Q4_18
+SC =~ Q5_1 + Q5_2 + Q5_3 + Q5_5 + Q5_6 + Q5_12
+IN =~ Q6_2 + Q6_5 + Q6_6 + Q6_7 + Q6_8 + Q6_11
+EN =~ Q7_2 + Q7_4 + Q7_5 + Q7_7 + Q7_8 + Q7_14
+
+EL ~~ EL + SC + IN + EN
+SC ~~ SC + IN + EN
+IN ~~ IN + EN
+EN ~~ EN
+
+Q4_3 ~~ Q4_4
+Q5_5 + Q5_2 ~~ Q5_6
+Q6_2 ~~ Q6_8
+Q7_7 ~~ Q7_8
+"
+
+fit0 <- lavaan::cfa(mod.config, data=mydata, estimator = "MLM",group = "teach")
+summary(fit0, standardized=T, fit.measures=T)
+
+```
+
+# Invariance Testing
+
+## Fast approach
+
+```{r}
+
+
+```
+
+## Test of Configural Invariance
+
+Tests for the configural invariance between groups is a relatively new methodological development.
+We use the approach proposed by Jorgensen et al. (2018?).
+
+
+```{r}
+
+library(semTools)
+
+
+## fit indices of interest for multiparameter omnibus test
+myAFIs <- c("chisq","cfi","rmsea","srmr","aic", "bic")
+
+## Use only 20 permutations for a demo.  In practice,
+## use > 1000 to reduce sampling variability of estimated p values
+
+## test configural invariance
+set.seed(12345)
+out.config <- permuteMeasEq(nPermute = 1000, con = fit0,AFIs = myAFIs)
+summary(out.config)
+
+hist(out.config, AFI = "chisq", nd = 2, alpha = .01,
+     legendArgs = list(x = "top"))
+hist(out.config, AFI = "cfi", legendArgs = list(x = "topright"))
+
+
+
+```
+
+## Test Metric Invariance
+
+
+```{r}
+
+set.seed(12345) # same permutations
+out.metric <- permuteMeasEq(nPermute = 20, uncon = fit.config, con = fit.metric,
+                            param = "loadings", AFIs = myAFIs,
+                            moreAFIs = moreAFIs, null = fit.null)
+summary(out.metric, nd = 4)
+
+```
+
+
+```{r}
+## config
+syntax.config <- measEq.syntax(
+  configural.model = mod.config,
+  data = mydata,
+  meanstructure=T,
+  ID.fac = "ref",
+  group = "teach"
+)
+cat(mod.config <- as.character(syntax.config))
+## print a summary of model features
+summary(syntax.config)
+fit.config <- cfa(mod.config, data = mydata, group = "teach")
+
+## metric invariance
+syntax.metric <- measEq.syntax(  
+  configural.model = mod.config,
+  data = mydata,
+  meanstructure=T,
+  ID.fac = "ref",
+  group = "teach",
+  group.equal = c("loadings")
+) # end creating syntax
+summary(syntax.metric)                    # summarize model features
+mod.metric <- as.character(syntax.metric) # save as text
+cat(mod.metric)                           # print/view lavaan syntax
+## fit model to data
+fit.metric <- cfa(mod.metric, data = mydata, group = "teach")
+## test equivalence of loadings, given equivalence of thresholds
+anova(fit.config, fit.metric)
+
+## scalar invariance
+syntax.scalar <- measEq.syntax(
+    configural.model = mod.config,
+  data = mydata,
+  meanstructure=T,
+  ID.fac = "ref",
+  group = "teach",
+  group.equal = c("loadings", "intercepts")
+) #end create syntax
+summary(syntax.scalar)                    # summarize model features
+mod.scalar <- as.character(syntax.scalar) # save as text
+cat(mod.scalar)                           # print/view lavaan syntax
+## fit model to data
+fit.scalar <- cfa(mod.scalar, data = mydata, group = "teach")
+## test equivalence of intercepts, given equal loadings
+anova(fit.metric, fit.scalar)
+
+## strict invariance
+syntax.strict <- measEq.syntax(
+  configural.model = mod.config,
+  data = mydata,
+  meanstructure=T,
+  ID.fac = "ref",
+  group = "teach",
+  group.equal = c("loadings", "intercepts", "residuals", "residual.covariances")
+) #end create syntax
+summary(syntax.strict)                    # summarize model features
+mod.strict <- as.character(syntax.strict) # save as text
+cat(mod.strict)                           # print/view lavaan syntax
+## fit model to data
+fit.strict <- cfa(mod.strict, data = mydata, group = "teach")
+## test equivalence of residual variance, given equal intercepts,  loadings
+anova(fit.scalar, fit.strict)
+
+## strict invariance
+syntax.strict.p <- measEq.syntax(
+  configural.model = mod.config,
+  data = mydata,
+  meanstructure=T,
+  ID.fac = "ref",
+  group = "teach",
+  group.equal = c("loadings", "intercepts", "residuals")
+) #end create syntax
+summary(syntax.strict.p)                    # summarize model features
+mod.strict.p <- as.character(syntax.strict.p) # save as text
+cat(mod.strict.p)                           # print/view lavaan syntax
+## fit model to data
+fit.strict.p <- cfa(mod.strict.p, data = mydata, group = "teach")
+## test equivalence of residual variance, given equal intercepts,  loadings
+anova(fit.strict, fit.strict.p)
+
+
+## lvmeans invariance
+syntax.lvmeans <- measEq.syntax(
+  configural.model = mod.config,
+  data = mydata,
+  meanstructure=T,
+  ID.fac = "ref",
+  group = "teach",
+  group.equal = c("loadings", "intercepts", "residuals", "means")
+) #end create syntax
+summary(syntax.lvmeans)                    # summarize model features
+mod.lvmeans <- as.character(syntax.lvmeans) # save as text
+cat(mod.lvmeans)                           # print/view lavaan syntax
+## fit model to data
+fit.lvmeans<- cfa(mod.lvmeans, data = mydata, group = "teach")
+
+## lvvar invariance
+syntax.lvvar <- measEq.syntax(
+  configural.model = mod.config,
+  data = mydata,
+  meanstructure=T,
+  ID.fac = "ref",
+  group = "teach",
+  group.equal = c("loadings", "intercepts", "residuals", "means", "lv.variances")
+) #end create syntax
+summary(syntax.lvvar)                    # summarize model features
+mod.lvvar <- as.character(syntax.lvvar) # save as text
+cat(mod.lvvar)                           # print/view lavaan syntax
+## fit model to data
+fit.lvvar<- cfa(mod.lvvar, data = mydata, group = "teach")
+
+## For a single table with all results, you can pass the models to
+## summarize to the compareFit() function
+summary(compareFit(fit.config, fit.metric, fit.scalar, fit.strict, fit.lvmeans, fit.lvvar))
+
+
+```
