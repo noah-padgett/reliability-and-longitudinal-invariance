@@ -20,6 +20,7 @@ set.seed(12345) # for replicability
 ```
 
 ```{r read-in-data}
+# Setup of Analysis
 datw1 <- readr::read_csv("data/UBC_Data_Wave1_Clean.csv");
 datw1$wave = 1
 datw2 <- readr::read_csv("data/UBC_Data_Wave2_Clean.csv")
@@ -27,27 +28,97 @@ datw2$wave = 2
 mydata <- full_join(datw1, datw2)
 ITEMS <- c(paste0("CG",1:3), paste0("CI",1:3), paste0("SS",1:3), paste0("SO",1:3), paste0("DM",1:3), paste0("DP",1:3), paste0("DG",1:3))
 
-analysis.dat <- mydata %>%
-  filter(keep_case==1) %>%
-  dplyr::select(all_of(c("HSP ID","wave", "Gender","Age","Year_School",ITEMS)))%>%
+```
+
+
+
+```{r special-clean}
+#|include=F
+
+temp <- mydata %>%
+  dplyr::select(all_of(c("HSP ID","wave", "Gender", "Age", "Year_School", ITEMS))) %>%
   group_by(`HSP ID`)%>%
   mutate(
     person_response_total = n()
   ) %>%
-  filter(person_response_total==2)%>%
-  dplyr::group_by(`HSP ID`, wave) %>%
-  dplyr::mutate(n = dplyr::n())%>%# make sure there's only 1 per person
-  filter(n==1)
+  arrange(desc(person_response_total), `HSP ID`)
+# View(temp)
+# for test-retest reliability analysis
+# remove HSP ID# 
+#   10310726 - age 19 - error in entry of ID number
+#   19860731 - age 22 - ""
+#   32040619 - wave 1 & age 19- ""
+#   38851108 - two wave one data only
+#   39550606 - ""
+n.prev = nrow(mydata)
+temp.mydata <- mydata %>%
+  dplyr::select(
+    all_of(c("HSP ID","wave", "Gender", "Age",
+             "Year_School", ITEMS))
+  ) %>%
+  # remove specific rows with known issues
+  filter(
+    !(`HSP ID` == 10310726 & Age == 19),
+    !(`HSP ID` == 19860731 & Age == 22),
+    !(`HSP ID` == 32040619 & Age == 19 & wave == 1),
+    !(`HSP ID` == 38851108),
+    !(`HSP ID` == 39550606)
+  )
+nrow(temp.mydata) - n.prev
+# Lost 7 responses
   
+# Next, check the counts for missing at each wave
+temp.mydata$n_miss_items <- rowSums(is.na(temp.mydata[,ITEMS]))
+# overall
+table(temp.mydata$n_miss_items)
+# by wave with complete missing at top (n_miss_items = 21)
+temp.mydata %>%
+  group_by(wave)%>%
+  count(n_miss_items) %>%
+  pivot_wider(
+    id_cols = "n_miss_items",
+    names_from = "wave",
+    names_prefix = "Count Wave ",
+    values_from = "n",
+    values_fill = 0
+  ) %>%
+  arrange(desc(n_miss_items))%>%
+  kable(format="html") %>%
+  kable_styling(full_width = T)
 
-# convert to "wide" data
-wide.analysis.data <- analysis.dat %>%
+# Exclude individuals with missing at either wave
+n.prev = nrow(temp.mydata)
+temp.mydata <- temp.mydata %>%
+  filter(n_miss_items == 0)
+nrow(temp.mydata) - n.prev
+# lost 523 cases
+
+# make sure to exclude each wave for those cases
+n.prev = nrow(temp.mydata)
+temp.mydata <- temp.mydata %>%
+  group_by(`HSP ID`)%>%
+  mutate(
+    respond_both_waves = ifelse(n()==2,1,0)
+  ) %>%
+  filter(respond_both_waves==1)
+  
+nrow(temp.mydata) - n.prev
+# lost 5473
+
+# Lastly, create two dataframe for use in the analyses
+# (1) long format with "Wave indicator variable" for multi-group
+analysis.dat <- temp.mydata %>%
+  dplyr::select(all_of(c("HSP ID","wave", "Gender", "Age", "Year_School", ITEMS)))
+# (2) wide format for longitudinal IFA models
+analysis.dat.wide <- analysis.dat %>%
   pivot_wider(
     id_cols = "HSP ID",
     names_from = "wave",
     values_from = all_of(ITEMS)
   )
+
 ```
+
 
 ## Model Specification
 
@@ -287,6 +358,11 @@ omega.c2 :=  (C.lambda.1 + C.lambda.2 + C.lambda.3 + C.lambda.4 + C.lambda.5 + C
 omega.s2 :=  (S.lambda.1 + S.lambda.2 + S.lambda.3 + S.lambda.4 + S.lambda.5 + S.lambda.6)^2*phi.s/((S.lambda.1 + S.lambda.2 + S.lambda.3 + S.lambda.4 + S.lambda.5 + S.lambda.6)^2*phi.s + 6)
 omega.d2 :=  (D.lambda.1 + D.lambda.2 + D.lambda.3 + D.lambda.4 + D.lambda.5 + D.lambda.6 + D.lambda.7 + D.lambda.8 + D.lambda.9)^2*phi.d/((D.lambda.1 + D.lambda.2 + D.lambda.3 + D.lambda.4 + D.lambda.5 + D.lambda.6 + D.lambda.7 + D.lambda.8 + D.lambda.9)^2*phi.d+9)
 
+# maximal reliability
+max.c :=  1/(1 +  (C.lambda.1^2 + C.lambda.2^2 + C.lambda.3^2 + C.lambda.4^2 + C.lambda.5^2 + C.lambda.6^2)^(-1))
+max.S :=  1/(1 +  (S.lambda.1^2 + S.lambda.2^2 + S.lambda.3^2 + S.lambda.4^2 + S.lambda.5^2 + S.lambda.6^2)^(-1))
+max.D :=  1/(1 +  (D.lambda.1^2 + D.lambda.2^2 + D.lambda.3^2 + D.lambda.4^2 + D.lambda.5^2 + D.lambda.6^2 + D.lambda.7^2 + D.lambda.8^2 + D.lambda.9^2)^(-1))
+
 "
 
 ```
@@ -297,10 +373,10 @@ omega.d2 :=  (D.lambda.1 + D.lambda.2 + D.lambda.3 + D.lambda.4 + D.lambda.5 + D
 # fit model
 fit <- cfa(
   model=full_model, 
-  data = wide.analysis.data,
+  data = analysis.dat.wide,
   ordered = T
 ) 
-summary(fit, standardized=T, fit.measures=T)
+summary(fit, standardized=T, fit.measures=T,ci = T, rsquare=T)
 
 ```
 
@@ -310,7 +386,7 @@ Naive computation of reliability.
 
 ```{r}
 
-wide.analysis.data <- wide.analysis.data %>%
+analysis.dat.wide <- analysis.dat.wide %>%
   mutate(
     C1 = CG1_1 + CG2_1 + CG3_1 + CI1_1 + CI2_1 + CI3_1,
     C2 = CG1_2 + CG2_2 + CG3_2 + CI1_2 + CI2_2 + CI3_2,
@@ -320,16 +396,16 @@ wide.analysis.data <- wide.analysis.data %>%
     D2 = DG1_2 + DG2_2 + DG3_2 + DP1_2 + DP2_2 + DP3_2 + DM1_2 + DM2_2 + DM3_2
   )
 
-ggplot(wide.analysis.data, aes(x=C1, y=C2))+
+ggplot(analysis.dat.wide, aes(x=C1, y=C2))+
   geom_jitter()+
   theme_classic()
-ggplot(wide.analysis.data, aes(x=S1, y=S2))+
+ggplot(analysis.dat.wide, aes(x=S1, y=S2))+
   geom_jitter()+
   theme_classic()
-ggplot(wide.analysis.data, aes(x=D1, y=D2))+
+ggplot(analysis.dat.wide, aes(x=D1, y=D2))+
   geom_jitter()+
   theme_classic()
 
-cor(wide.analysis.data[,c("C1","C2","S1","S2","D1","D2")])
+cor(analysis.dat.wide[,c("C1","C2","S1","S2","D1","D2")])
 # est: .65, .67, .66
 ```

@@ -1,28 +1,33 @@
 set-up	.Random.seed	anova_assumptions_check	cust.boxplot	get_date	new.packages	o2	omega2	p_omega2	packages	w.d
 read-in	analysis.dat	datw1	datw2	ITEMS	mydata	wide.analysis.data
-unnamed-chunk-1	
+unnamed-chunk-1	counts	prop	prop1	prop2	ss	.longitudinal-invariance_cache/html/unnamed-chunk-1_9691bf4fbeb2f366d9e7d5327952b225_meta
 model	base_model	configural.model.wide
-invar-test-config	fit.config	mod.config	myAFIs	nPerm	obs.fit	out.config	perm.dat	perm.dat2	syntax.config
+invar-test-config	fit.config	mod.config	myAFIs	nPerm	obs.fit	out.config	p	perm.dat	perm.dat2	syntax.config
 inv-config-wide-fit	fit.config.wide
-config-residuals	resid.config	resid.config.out	transform_resid_to_dataframe	.longitudinal-invariance_cache/html/config-residuals_48aafc4300a32f9f2644111ea23912c3_meta
+config-residuals	resid.config	resid.config.out	transform_resid_to_dataframe	.longitudinal-invariance_cache/html/config-residuals_0064654bfcc96ffe30c83cb4fca5a6cd_meta
 config-mod indices	
 invar-test-threshold-longitudinal	fit.threshold.wide	threshold.model.wide
 visualize-thresholds-config	cols	config.model.threshold.est	shp	tau1_1	tau1_2
-thresh-residuals	resid.thresh	resid.thresh.out	.longitudinal-invariance_cache/html/thresh-residuals_410d0e7681b50be2714125b2bceaf793_meta
+thresh-residuals	resid.thresh	resid.thresh.out	.longitudinal-invariance_cache/html/thresh-residuals_d237dd15ed461b4ac3dd69179baff391_meta
 thresh-mod indices	
 invar-test-thresholds	fit.threshold	mod.thresh	syntax.thresh
 invar-test-loadings-longitudinal	fit.loading.wide	loading.model.wide
-visualize-loadings-threshold	cols	shp	thresh.model.loading.est	.longitudinal-invariance_cache/html/visualize-loadings-threshold_f3faed2d7eb75c3b2c26944c99d1b7a7_meta
+visualize-loadings-threshold	cols	shp	thresh.model.loading.est	.longitudinal-invariance_cache/html/visualize-loadings-threshold_127d4ba25d0f2e7ce3a119922316afb7_meta
 invar-test-loadings	fit.loading	mod.metric	syntax.metric
-loading-residuals	resid.loading	resid.loading.out	.longitudinal-invariance_cache/html/loading-residuals_9453d4dcd9c3227791e5023c57976d96_meta
+loading-residuals	resid.loading	resid.loading.out	.longitudinal-invariance_cache/html/loading-residuals_dbf2a162c6f066ac1eae0ad74bff7fef_meta
 loading-mod indices	
 invar-test-lrintercept-longitudinal	fit.lrintercept.wide	lrintercept.model.wide
-visualize-lrintercept-differences	cols	loading.model.lrintercept.est	nu	prob_vec1	prob_vec2	shp	tau_vec	.longitudinal-invariance_cache/html/visualize-lrintercept-differences_70b0b34b4d0e996a4869d0637ad646b3_meta
+visualize-lrintercept-differences	cols	loading.model.lrintercept.est	nu	prob_vec1	prob_vec2	shp	tau_vec	.longitudinal-invariance_cache/html/visualize-lrintercept-differences_75f6f100553d4dec701761eae4c430ed_meta
 test-invar-lrintercepts	fit.lrintercept	mod.scalar	syntax.scalar
-lrintercept-residuals	resid.lrintercept	resid.lrintercept.out	.longitudinal-invariance_cache/html/lrintercept-residuals_7f81a6a76d567a47ba5d41463e64f034_meta
+lrintercept-residuals	resid.lrintercept	resid.lrintercept.out	.longitudinal-invariance_cache/html/lrintercept-residuals_6543f604248263d92c77335e99f1f32d_meta
 lrintercept-mod indices	
 invar-test-lrvariance-longitudinal	fit.lrvariance.wide	lrvariance.model.wide
 invar-test-lrvariances	fit.lrvariance	mod.strict	syntax.strict
-lrvariance-residuals	resid.lrvariance	resid.lrvariance.out	.longitudinal-invariance_cache/html/lrvariance-residuals_7f1ba814432c3e41d08062fe95d46e45_meta
+lrvariance-residuals	resid.lrvariance	resid.lrvariance.out	.longitudinal-invariance_cache/html/lrvariance-residuals_ad6e0171ec5115beb82236c44bdcbd80_meta
 lrvariance-mod indices	
 unnamed-chunk-2	fit.comp	fit.comp.wide
+special-clean	analysis.dat	analysis.dat.wide	datw1	datw2	ITEMS	mydata	n.prev	temp	temp.mydata	.longitudinal-invariance_cache/html/special-clean_49211883f5b50c49e2e76c69803f7f4f_meta
+mg-invar-test-thresholds	fit.threshold	mod.thresh	syntax.thresh
+mg-invar-test-loadings	fit.loading	mod.metric	syntax.metric
+mg-invar-test-lrintercepts	fit.lrintercept	mod.scalar	syntax.scalar
+mg-invar-test-lrvariances	fit.lrvariance	mod.strict	syntax.strict

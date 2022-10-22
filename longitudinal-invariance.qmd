@@ -10,8 +10,9 @@ On this page, longitudinal invariance is discussed in more detail.
 #|cache.comments=T
 
 knitr::opts_chunk$set(
-  autodep = TRUE, cache=TRUE, out.width = "100%",
-  fig.width = 24, fig.asp = 0.625,
+  autodep = TRUE, cache=TRUE, 
+  out.width = "100%",
+  fig.width = 10, fig.asp = 0.625,
   tidy = 'formatR'
 )
 
@@ -27,8 +28,10 @@ set.seed(12345) # for replicability
 
 # Data
 
-```{r read-in}
+```{r special-clean}
+#|include=F
 
+# Setup of Analysis
 datw1 <- readr::read_csv("data/UBC_Data_Wave1_Clean.csv");
 datw1$wave = 1
 datw2 <- readr::read_csv("data/UBC_Data_Wave2_Clean.csv")
@@ -36,33 +39,116 @@ datw2$wave = 2
 mydata <- full_join(datw1, datw2)
 ITEMS <- c(paste0("CG",1:3), paste0("CI",1:3), paste0("SS",1:3), paste0("SO",1:3), paste0("DM",1:3), paste0("DP",1:3), paste0("DG",1:3))
 
-analysis.dat <- mydata %>%
-  filter(keep_case==1) %>%
-  dplyr::select(all_of(c("HSP ID","wave", "Gender","Age","Year_School",ITEMS)))%>%
+temp <- mydata %>%
+  dplyr::select(all_of(c("HSP ID","wave", "Gender", "Age", "Year_School", ITEMS))) %>%
   group_by(`HSP ID`)%>%
   mutate(
     person_response_total = n()
   ) %>%
-  filter(person_response_total==2)%>%
-  dplyr::group_by(`HSP ID`, wave) %>%
-  dplyr::mutate(n = dplyr::n())%>%# make sure there's only 1 per person
-  filter(n==1)
+  arrange(desc(person_response_total), `HSP ID`)
+# View(temp)
+# for test-retest reliability analysis
+# remove HSP ID# 
+#   10310726 - age 19 - error in entry of ID number
+#   19860731 - age 22 - ""
+#   32040619 - wave 1 & age 19- ""
+#   38851108 - two wave one data only
+#   39550606 - ""
+n.prev = nrow(mydata)
+temp.mydata <- mydata %>%
+  dplyr::select(
+    all_of(c("HSP ID","wave", "Gender", "Age",
+             "Year_School", ITEMS))
+  ) %>%
+  # remove specific rows with known issues
+  filter(
+    !(`HSP ID` == 10310726 & Age == 19),
+    !(`HSP ID` == 19860731 & Age == 22),
+    !(`HSP ID` == 32040619 & Age == 19 & wave == 1),
+    !(`HSP ID` == 38851108),
+    !(`HSP ID` == 39550606)
+  )
+nrow(temp.mydata) - n.prev
+# Lost 7 responses
   
+# Next, check the counts for missing at each wave
+temp.mydata$n_miss_items <- rowSums(is.na(temp.mydata[,ITEMS]))
+# overall
+table(temp.mydata$n_miss_items)
+# by wave with complete missing at top (n_miss_items = 21)
+temp.mydata %>%
+  group_by(wave)%>%
+  count(n_miss_items) %>%
+  pivot_wider(
+    id_cols = "n_miss_items",
+    names_from = "wave",
+    names_prefix = "Count Wave ",
+    values_from = "n",
+    values_fill = 0
+  ) %>%
+  arrange(desc(n_miss_items))%>%
+  kable(format="html") %>%
+  kable_styling(full_width = T)
 
-# convert to "wide" data
-wide.analysis.data <- analysis.dat %>%
+# Exclude individuals with missing at either wave
+n.prev = nrow(temp.mydata)
+temp.mydata <- temp.mydata %>%
+  filter(n_miss_items == 0)
+nrow(temp.mydata) - n.prev
+# lost 523 cases
+
+# make sure to exclude each wave for those cases
+n.prev = nrow(temp.mydata)
+temp.mydata <- temp.mydata %>%
+  group_by(`HSP ID`)%>%
+  mutate(
+    respond_both_waves = ifelse(n()==2,1,0)
+  ) %>%
+  filter(respond_both_waves==1)
+  
+nrow(temp.mydata) - n.prev
+# lost 5473
+
+# Lastly, create two dataframe for use in the analyses
+# (1) long format with "Wave indicator variable" for multi-group
+analysis.dat <- temp.mydata %>%
+  dplyr::select(all_of(c("HSP ID","wave", "Gender", "Age", "Year_School", ITEMS)))
+# (2) wide format for longitudinal IFA models
+analysis.dat.wide <- analysis.dat %>%
   pivot_wider(
     id_cols = "HSP ID",
     names_from = "wave",
     values_from = all_of(ITEMS)
   )
+
+
 ```
 
 ## Data Summary
 
 ```{r}
 # data summary stats
+ss <- psych::describeBy(
+  analysis.dat[,ITEMS],
+  group=analysis.dat$wave,
+  mat=T
+) 
+ss %>%
+  mutate(
+    item=substr(rownames(ss),1,3),
+    Wave = group1
+  )%>%
+  dplyr::select(all_of(c("Wave", "item",colnames(ss)[4:14])))%>%
+  kable(format="html",digits=3,row.names = F)%>%
+  kable_styling(full_width = T)%>%
+  scroll_box(width="100%",height="500px")
 
+counts <- t(sapply(analysis.dat.wide[,paste0(ITEMS,"_1")],table))
+prop1 <- counts/nrow(analysis.dat.wide)
+counts <- t(sapply(analysis.dat.wide[,paste0(ITEMS,"_2")],table))
+prop2 <- counts/nrow(analysis.dat.wide)
+prop <- rbind(prop1, prop2)
+print(xtable(cbind(ss[,c("group1", "mean", "sd")], prop)))
 ```
 
 # Measurement Model
@@ -138,7 +224,7 @@ DG3_1 ~~ DG3_2
 
 ```{r invar-test-config}
 
-nPerm<-1000 # for testing - for full analysis use 1000/10000
+nPerm<-1000 # for testing - for full analysis use >=1000
 
 # robust not available for categorical model
 myAFIs <- c(
@@ -159,15 +245,18 @@ syntax.config <- measEq.syntax(
     group = "wave"
   )
   mod.config <- as.character(syntax.config)
-  cat(mod.config)
+  #cat(mod.config)
 
 fit.config <- cfa(mod.config, data=analysis.dat, group = "wave")
 summary(fit.config, standardized=T, fit.measures=T)
 # note , the permuteMeasEq takes a LONG time to run,
 # recommend to go get coffee
 out.config <- permuteMeasEq(
-  nPermute = nPerm, con = fit.config,
-  AFIs = myAFIs, showProgress = F)
+  nPermute = nPerm, 
+  con = fit.config,
+  AFIs = myAFIs, 
+  showProgress = F
+)
 summary(out.config)
 
 # the code below takes the output from the permutation test and creates a concise plot from which to visualize the results.
@@ -195,6 +284,24 @@ ggplot(perm.dat2, aes(x=fit))+
     axis.text = element_text(size=5)
   )
 
+p <- perm.dat2 %>%
+  filter(index%in%c("chisq.scaled", "cfi.scaled", "rmsea.scaled", "srmr"))%>%
+ggplot(aes(x=fit))+
+  geom_histogram(aes(y=..density..), position="identity", fill="white", color="black")+
+  geom_density(color="grey10")+
+  geom_vline(aes(xintercept=fit.obs, linetype="Observed Fit"), color="red")+
+  facet_wrap(.~index, scales="free", nrow = 1)+
+  scale_linetype_manual(values=c("Observed Fit"="dashed"), name=NULL)+
+  labs(x=NULL, title=NULL)+
+  theme_classic()+
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "none",
+    axis.text = element_text(size=5)
+  )
+p
+ggsave("permutations.pdf", p, width=7.5, height=2.5, units = "in")
+
 ```
 
 The results are promising, and give some evidence that the factor structure is likely invariant across waves. The distributions for the scaled-CFI and RMSEA are troublesome, pointing to potential variance in the structure due to the high value of the observed fit index relative to the permutation distribution. I would like the distributions too all similar to the CFI distribution where the observed fit value is nearly in the center of permutation distribution.
@@ -204,7 +311,7 @@ Next, the model above is re-estimated using the "wide" format approach that inco
 ```{r inv-config-wide-fit}
 fit.config.wide <- cfa(
   model=configural.model.wide, 
-  data = wide.analysis.data,
+  data = analysis.dat.wide,
   ordered = T
 ) 
 summary(fit.config.wide, standardized=T, fit.measures=T)
@@ -212,7 +319,7 @@ summary(fit.config.wide, standardized=T, fit.measures=T)
 
 The estimated parameters are similar between the two specification. We will focus on this latter model specification, but estimate the former (because it is very easy to get) to see if any major differences appear in our conclusions about invariance.
 
-Residuals $$Cor(Obsersed)-Cor(Model\ Implied)$$
+Residuals $$Cor(Observed)-Cor(Model\ Implied)$$
 
 ```{r config-residuals}
 
@@ -513,7 +620,7 @@ DG3_1 ~~ DG3_2
 # fit model
 fit.threshold.wide <- cfa(
   model=threshold.model.wide, 
-  data = wide.analysis.data,
+  data = analysis.dat.wide,
   ordered = T
 ) 
 summary(fit.threshold.wide, standardized=T, fit.measures=T)
@@ -624,7 +731,7 @@ modindices(fit.threshold.wide,sort. = T, maximum.number = 20)
 
 Let's check how the model looks without assuming the longitudinal error covariances. I believe this model will fit worse is more likely to indicate variance in the thresholds, but we have sufficient evidence from the above analysis to conclude the tenability of invariance.
 
-```{r invar-test-thresholds}
+```{r mg-invar-test-thresholds}
   
 ## threshol invariance
 syntax.thresh <- measEq.syntax(  
@@ -882,7 +989,7 @@ DG3_1 ~~ DG3_2
 # fit model
 fit.loading.wide <- cfa(
   model=loading.model.wide, 
-  data = wide.analysis.data,
+  data = analysis.dat.wide,
   ordered = T
 ) 
 summary(fit.loading.wide, standardized=T, fit.measures=T)
@@ -939,30 +1046,6 @@ Similar to the thresholds, the difference between wave 1 and wave 2 estimates of
 
 More generally, items showing the largest difference across waves should be investigated for the content of the items to investigate if the content may point to a reason for potential differences over time.
 
-Lastly, check the non-longitudinal approach.
-
-```{r invar-test-loadings}
-## metric invariance
-syntax.metric <- measEq.syntax(  
-  configural.model = mod.config,
-  data = analysis.dat,
-  ordered=T,
-  parameterization = "delta",
-  ID.cat = "Wu.Estabrook.2016",
-  ID.fac = "std.lv",
-  group = "wave",
-  group.equal = c("thresholds", "loadings")
-) # end creating syntax
-summary(syntax.metric)                    # summarize model features
-mod.metric <- as.character(syntax.metric) # save as text
-## fit model to data
-fit.loading <- cfa(mod.metric, data = analysis.dat, group = "wave")
-summary(fit.loading)
-## test equivalence of loadings, given equivalence of thresholds
-lavTestLRT(fit.threshold, fit.loading, method="satorra.bentler.2010")
-
-```
-
 Investigate residuals
 
 ```{r loading-residuals}
@@ -1000,6 +1083,33 @@ Mod indices
 modindices(fit.loading.wide,sort. = T, maximum.number = 20)
 
 ```
+
+
+### Multigroup model
+
+```{r mg-invar-test-loadings}
+  
+## metric invariance
+syntax.metric <- measEq.syntax(  
+  configural.model = mod.config,
+  data = analysis.dat,
+  ordered=T,
+  parameterization = "delta",
+  ID.cat = "Wu.Estabrook.2016",
+  ID.fac = "std.lv",
+  group = "wave",
+  group.equal = c("thresholds", "loadings")
+) # end creating syntax
+summary(syntax.metric)                    # summarize model features
+mod.metric <- as.character(syntax.metric) # save as text
+## fit model to data
+fit.loading <- cfa(mod.metric, data = analysis.dat, group = "wave")
+summary(fit.loading)
+## test equivalence of loadings, given equivalence of thresholds
+lavTestLRT(fit.threshold, fit.loading, method="satorra.bentler.2010")
+
+```
+
 
 ## Test Latent Response Intercept (scalar) Invariance
 
@@ -1236,7 +1346,7 @@ DG3_1 ~~ DG3_2
 # fit model
 fit.lrintercept.wide <- cfa(
   model=lrintercept.model.wide, 
-  data = wide.analysis.data,
+  data = analysis.dat.wide,
   ordered = T
 ) 
 summary(fit.lrintercept.wide, standardized=T, fit.measures=T)
@@ -1333,34 +1443,7 @@ sum(prob_vec2*1:7) # wave 2 with a lower item intercept has a lower item mean
 
 ```
 
-Backwards compared to thresholds, a lower mean on the latent response would indicate a lower response on average to the item. Meaning, items with a lower latent response variable average will have a lower average on the observed items, on average. The major gain we get from moving from the observed categorical indicators to the latent respone variables is a easier comparison on a continuous scale as opposed to the observed categorical scale.
-
-Next, test the multi-group way.
-
-```{r test-invar-lrintercepts}
-
-## scalar invariance
-syntax.scalar <- measEq.syntax(
-  configural.model = mod.config,
-  data = analysis.dat,
-  ordered=T,
-  parameterization = "delta",
-  ID.cat = "Wu.Estabrook.2016",
-  ID.fac = "std.lv",
-  group = "wave",
-  group.equal = c("thresholds", "loadings", "intercepts")
-) #end create syntax
-summary(syntax.scalar)# summarize model features
-mod.scalar <- as.character(syntax.scalar) # save as text
-## fit model to data
-fit.lrintercept <- cfa(mod.scalar, data = analysis.dat, group = "wave")
-summary(fit.lrintercept, standardized=T, fit.measures=T)
-## test equivalence of intercepts, given equal loadings and thresholds
-lavTestLRT(fit.loading, fit.lrintercept, method="satorra.bentler.2010")
-
-```
-
-Again, more evidence of the equivalence of the latent response variables across waves.
+Backwards compared to thresholds, a lower mean on the latent response would indicate a lower response on average to the item. Meaning, items with a lower latent response variable average will have a lower average on the observed items, on average. The major gain we get from moving from the observed categorical indicators to the latent response variables is a easier comparison on a continuous scale as opposed to the observed categorical scale.
 
 Investigate residuals
 
@@ -1399,6 +1482,33 @@ Mod indices
 modindices(fit.lrintercept.wide,sort. = T, maximum.number = 20)
 
 ```
+
+
+### Multigroup model
+
+```{r mg-invar-test-lrintercepts}
+  
+## scalar invariance
+syntax.scalar <- measEq.syntax(
+  configural.model = mod.config,
+  data = analysis.dat,
+  ordered=T,
+  parameterization = "delta",
+  ID.cat = "Wu.Estabrook.2016",
+  ID.fac = "std.lv",
+  group = "wave",
+  group.equal = c("thresholds", "loadings", "intercepts")
+) #end create syntax
+summary(syntax.scalar)# summarize model features
+mod.scalar <- as.character(syntax.scalar) # save as text
+## fit model to data
+fit.lrintercept <- cfa(mod.scalar, data = analysis.dat, group = "wave")
+summary(fit.lrintercept, standardized=T, fit.measures=T)
+## test equivalence of intercepts, given equal loadings and thresholds
+lavTestLRT(fit.loading, fit.lrintercept, method="satorra.bentler.2010")
+
+```
+
 
 ## Test Residual variance (latent response; strict) Invariance
 
@@ -1635,7 +1745,7 @@ DG3_1 ~~ DG3_2
 # fit model
 fit.lrvariance.wide <- cfa(
   model=lrvariance.model.wide, 
-  data = wide.analysis.data,
+  data = analysis.dat.wide,
   ordered = T
 ) 
 summary(fit.lrvariance.wide, standardized=T, fit.measures=T)
@@ -1645,29 +1755,6 @@ lavTestLRT(fit.lrintercept.wide,fit.lrvariance.wide, method = "satorra.bentler.2
 ```
 
 The chi-square test gives evidence of invariance of the latent response scales/variances across waves. This gives strong evidence that we can compare the factors across waves with confidence that the factors at least statistically comparable.
-
-```{r invar-test-lrvariances}
-
-## strict invariance
-syntax.strict <- measEq.syntax(
-  configural.model = mod.config,
-  data = analysis.dat,
-  ordered=T,
-  parameterization = "theta",
-  ID.cat = "Wu.Estabrook.2016",
-  ID.fac = "std.lv",
-  group = "wave",
-  group.equal = c("thresholds", "loadings", "intercepts", "residuals")
-) #end create syntax
-summary(syntax.strict)                    # summarize model features
-mod.strict <- as.character(syntax.strict) # save as text
-## fit model to data
-fit.lrvariance <- cfa(mod.strict, data = analysis.dat, group = "wave")
-summary(fit.lrvariance, standardized=T, fit.measures=T)
-## test equivalence of residual variance
-lavTestLRT(fit.lrintercept, fit.lrvariance, method="satorra.bentler.2010")
-
-```
 
 Investigate residuals
 
@@ -1707,6 +1794,33 @@ Mod indices
 modindices(fit.lrvariance.wide,sort. = T, maximum.number = 20)
 
 ```
+
+### Multigroup model
+
+
+```{r mg-invar-test-lrvariances}
+
+## strict invariance
+syntax.strict <- measEq.syntax(
+  configural.model = mod.config,
+  data = analysis.dat,
+  ordered=T,
+  parameterization = "theta",
+  ID.cat = "Wu.Estabrook.2016",
+  ID.fac = "std.lv",
+  group = "wave",
+  group.equal = c("thresholds", "loadings", "intercepts", "residuals")
+) #end create syntax
+summary(syntax.strict)                    # summarize model features
+mod.strict <- as.character(syntax.strict) # save as text
+## fit model to data
+fit.lrvariance <- cfa(mod.strict, data = analysis.dat, group = "wave")
+summary(fit.lrvariance, standardized=T, fit.measures=T)
+## test equivalence of residual variance
+lavTestLRT(fit.lrintercept, fit.lrvariance, method="satorra.bentler.2010")
+
+```
+
 
 ## Wrap-Up Summary Information
 
